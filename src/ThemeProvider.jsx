@@ -1,10 +1,13 @@
-import { ConfigProvider, theme } from 'antd';
+import { ConfigProvider } from 'antd';
+import '@fontsource/poppins'; // You can install this via npm: npm install @fontsource/poppins
 
 const ThemeProvider = ({ children }) => {
   return (
     <ConfigProvider
       theme={{
-        algorithm: theme.darkAlgorithm,
+        token: {
+          fontFamily: 'Poppins, sans-serif',
+        },
         components: {
           Button: {
             colorPrimary: '#0D300D',
