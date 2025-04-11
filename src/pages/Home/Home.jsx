@@ -4,15 +4,18 @@ import {Button, Modal, Form, Input, Typography, Divider, Image, Tabs, Flex, mess
 import denrLogo from '../../assets/images/denr.svg';
 import { Link, useNavigate } from 'react-router-dom';
 import http from "../../utils/http.js";
+import OtpModal from "./OtpModal.jsx";
 
 const { Text } = Typography;
 const { TabPane } = Tabs;
 
 function Home() {
+  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [signinModalVisible, setSigninModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('signin');
+  const [otpModalVisible, setOtpModalVisible] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('auth');
@@ -31,16 +34,14 @@ function Home() {
   const onSignin = async (values) => {
     setLoading(true);
     try {
-      console.log('Form values:', values);
       const response = await http.post('/auth/login', values);
-      console.log('response', response);
-      const { token, data } = response;
+      console.log(response);
+      if(response.success) {
+        messageApi.success({content: 'OTP sent successfully!', key: 'otp-sent', duration: 3});
+        setOtpModalVisible(true);
+        setSigninModalVisible(false);
+      }
 
-      localStorage.setItem('auth', token);
-      localStorage.setItem('identity', JSON.stringify(data));
-
-      message.success('Login successful');
-      navigate('/dashboard');
     } catch (error) {
       console.log(error);
       message.error('Login failed: ' + (error.response?.data.message || error.message));
@@ -158,6 +159,11 @@ function Home() {
           </TabPane>
         </Tabs>
       </Modal>
+      {contextHolder}
+      <OtpModal
+        visible={otpModalVisible}
+        setVisible={setOtpModalVisible}
+      />
     </HomeStyled>
   );
 }
