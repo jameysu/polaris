@@ -3,14 +3,14 @@ import Home from './pages/Home/Home.jsx';
 import Navbar from './components/Navbar/Navbar.jsx';
 import ThemeProvider from './ThemeProvider.jsx';
 import NotFound from './pages/NotFound/NotFound.jsx';
-import Dashboard from './pages/Dashboard/Dashboard.jsx';  // Assuming you have a Dashboard page
+import Dashboard from './pages/Dashboard/Dashboard.jsx';
 
 // ProtectedRoute Component to guard routes for authenticated users only
 function ProtectedRoute({ element }) {
-  const token = localStorage.getItem('auth');  // Assuming your token is saved in 'jwtToken'
+  const token = localStorage.getItem('auth');
 
   if (!token) {
-    return <Navigate to="/" />;  // Redirect to home page if not authenticated
+    return <Navigate to="/" />;
   }
 
   return element;

@@ -12,9 +12,11 @@ const { TabPane } = Tabs;
 function Home() {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(false);
   const [signinModalVisible, setSigninModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('signin');
+  const [loginResponse, setLoginResponse] = useState({});
   const [otpModalVisible, setOtpModalVisible] = useState(false);
 
   useEffect(() => {
@@ -35,6 +37,7 @@ function Home() {
     setLoading(true);
     try {
       const response = await http.post('/auth/login', values);
+      setLoginResponse(response);
       console.log(response);
       if(response.success) {
         messageApi.success({content: 'OTP sent successfully!', key: 'otp-sent', duration: 3});
@@ -163,6 +166,7 @@ function Home() {
       <OtpModal
         visible={otpModalVisible}
         setVisible={setOtpModalVisible}
+        loginResponse={loginResponse}
       />
     </HomeStyled>
   );
