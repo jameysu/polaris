@@ -28,9 +28,8 @@ function Home() {
     navigate,
   ])
 
-  const onFinish = (values) => {
+  const onSignup = (values) => {
     console.log('Form values:', values);
-    setSigninModalVisible(false);
   };
 
   const onSignin = async (values) => {
@@ -114,8 +113,35 @@ function Home() {
 
           <TabPane tab="Signup" key="signup">
             <Form
-              onFinish={onFinish}
+              onFinish={onSignup}
             >
+              <Form.Item
+                name="firstname"
+                rules={[{ required: true, message: 'Please input your first name!' }]}
+              >
+                <Input placeholder="Enter First Name" />
+              </Form.Item>
+
+              <Form.Item
+                name="lastname"
+                rules={[{ required: true, message: 'Please input your last name!' }]}
+              >
+                <Input placeholder="Enter Last Name" />
+              </Form.Item>
+
+              <Form.Item
+                name="middlename"
+              >
+                <Input placeholder="Enter Middle name!" />
+              </Form.Item>
+
+              <Form.Item
+                name="phonenumber"
+                rules={[{ required: true, message: 'Please input your mobile number!' }]}
+              >
+                <Input addonBefore='+63' placeholder="Enter your Mobile Number" />
+              </Form.Item>
+
               <Form.Item
                 name="username"
                 rules={[{ required: true, message: 'Please input your username!' }]}
