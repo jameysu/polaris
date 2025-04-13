@@ -28,7 +28,7 @@ function Dashboard() {
       case 'about':
         return <About />;
       default:
-        return null;
+        return <Home />;
     }
   };
 
