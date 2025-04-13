@@ -61,7 +61,8 @@ function Dashboard() {
        <Flex vertical gap={'small'}>
          <Text>What is the purpose of your transaction?</Text>
          <Select
-           defaultValue="1"
+           placeholder="Select your transaction"
+           defaultValue={null}
            options={[
              {
                value: '1',
