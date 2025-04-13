@@ -9,11 +9,11 @@ const NavbarStyled = styled.div`
   align-items: center;
 
   .ant-flex {
-    padding: 10px 30px 10px 30px;
+    padding: 5px 30px 5px 30px;
     width: 100%;
     
     .ant-image {
-      width: 50px;
+      width: 45px;
     }
   }
 `

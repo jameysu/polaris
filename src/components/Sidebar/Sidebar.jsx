@@ -1,38 +1,54 @@
 import React from 'react';
-import { AppstoreOutlined, HomeOutlined, SettingOutlined, BellOutlined, UserOutlined, InfoCircleOutlined } from '@ant-design/icons';
-import { Menu } from 'antd';
+import { AppstoreOutlined, HomeOutlined, PlusOutlined, BellOutlined, UserOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import {Button, Menu} from 'antd';
 
 const items = [
   {
-    key: '1',
+    key: 'create-application',
+    style: {padding: 0, marginTop: 0},
+    label: (
+      <Button type="primary" block icon={<PlusOutlined />} style={{ textAlign: 'left'}}>
+        Set Application
+      </Button>
+    ),
+  },
+  {
+    key: 'home',
     label: 'Home',
     icon: <HomeOutlined />,
   },
   {
-    key: '2',
+    key: 'summary',
     label: 'Summary',
     icon: <AppstoreOutlined />,
+    children: [
+      { key: 'pendings', label: 'Pendings' },
+      { key: 'view-document', label: 'View Document' },
+    ],
   },
   {
-    key: '3',
-    label: 'Notifications',
-    icon: <BellOutlined />,
-  },
-  {
-    key: '4',
+    key: 'account',
     label: 'Account',
     icon: <UserOutlined />,
+    children: [
+      { key: 'user', label: 'User' },
+    ],
   },
   {
-    key: '5',
+    key: 'about',
     label: 'About',
     icon: <InfoCircleOutlined />,
   },
 ];
 
-const Sidebar = ({ onMenuSelect }) => {
+const Sidebar = ({ onMenuSelect, setCreateTransactionModalVisible }) => {
   const onClick = e => {
-    onMenuSelect(e.key); // pass selected key to parent
+    const { key } = e;
+    if (key === 'create-application') {
+      setCreateTransactionModalVisible(true);
+      return;
+    }
+    onMenuSelect(key);
   };
 
   return (
