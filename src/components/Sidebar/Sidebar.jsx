@@ -55,7 +55,7 @@ const Sidebar = ({ onMenuSelect, setCreateTransactionModalVisible }) => {
     <Menu
       onClick={onClick}
       style={{ width: 256, height: '100%' }}
-      defaultSelectedKeys={['1']}
+      defaultSelectedKeys={['home']}
       mode="inline"
       items={items}
     />
