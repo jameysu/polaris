@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import HomeStyled from './Home.styles.jsx';
-import {Button, Modal, Form, Input, Typography, Divider, Image, Tabs, Flex, message} from 'antd';
+import {Button, Modal, Form, Input, Typography, Divider, Image, Tabs, Flex, message, DatePicker} from 'antd';
 import denrLogo from '../../assets/images/denr.svg';
 import { Link, useNavigate } from 'react-router-dom';
 import http from "../../utils/http.js";
@@ -135,12 +135,20 @@ function Home() {
                 <Input placeholder="Enter Middle name!" />
               </Form.Item>
 
-              <Form.Item
-                name="phonenumber"
-                rules={[{ required: true, message: 'Please input your mobile number!' }]}
-              >
-                <Input addonBefore='+63' placeholder="Enter your Mobile Number" />
-              </Form.Item>
+              <Flex gap="middle">
+                <Form.Item
+                  name="birthdate"
+                >
+                  <DatePicker placeholder="Date of Birth" />
+                </Form.Item>
+
+                <Form.Item
+                  name="phonenumber"
+                  rules={[{ required: true, message: 'Please input your mobile number!' }]}
+                >
+                  <Input addonBefore='+63' placeholder="Enter your Mobile Number" />
+                </Form.Item>
+              </Flex>
 
               <Form.Item
                 name="username"
