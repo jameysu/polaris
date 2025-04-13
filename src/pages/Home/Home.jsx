@@ -12,6 +12,10 @@ const { TabPane } = Tabs;
 function Home() {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
+  const [signinForm] = Form.useForm();
+  const [signupForm] = Form.useForm();
+  console.log(signinForm.getFieldsValue());
+  console.log(signupForm?.getFieldsValue());
 
   const [loading, setLoading] = useState(false);
   const [signinModalVisible, setSigninModalVisible] = useState(false);
@@ -31,6 +35,12 @@ function Home() {
   const onSignup = (values) => {
     console.log('Form values:', values);
   };
+
+  const onCloseModal = () => {
+    setSigninModalVisible(false);
+    signinForm.resetFields();
+    signupForm?.resetFields();
+  }
 
   const onSignin = async (values) => {
     setLoading(true);
@@ -77,14 +87,16 @@ function Home() {
       <Modal
         title="Signin / Signup"
         open={signinModalVisible}
-        onCancel={() => setSigninModalVisible(false)}
+        onCancel={onCloseModal}
         footer={null} // Remove default footer
         width={400}
         centered
+        maskClosable={false}
       >
         <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key)}>
           <TabPane tab="Signin" key="signin">
             <Form
+              form={signinForm}
               labelCol={{ span: 8 }}
               wrapperCol={{ span: 16 }}
               onFinish={onSignin}
@@ -113,6 +125,7 @@ function Home() {
 
           <TabPane tab="Signup" key="signup">
             <Form
+              form={signupForm}
               onFinish={onSignup}
             >
               <Form.Item
@@ -161,14 +174,14 @@ function Home() {
                 name="email"
                 rules={[{ required: true, message: 'Please input your email!' }]}
               >
-                <Input placeholder="Enter Email" />
+                <Input id='newEmail' placeholder="Enter Email" />
               </Form.Item>
 
               <Form.Item
                 name="password"
                 rules={[{ required: true, message: 'Please input your password!' }]}
               >
-                <Input.Password placeholder="Enter Password" />
+                <Input.Password id='newPassword' placeholder="Enter Password" />
               </Form.Item>
 
               <Form.Item

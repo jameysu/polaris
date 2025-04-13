@@ -33,7 +33,7 @@ function Dashboard() {
       <Navbar />
       <div style={{ display: 'flex', height: '100%' }}>
         <Sidebar onMenuSelect={setSelectedKey} />
-        <div style={{ flex: 1, padding: 24 }}>
+        <div style={{ flex: 1}}>
           {renderContent()}
         </div>
       </div>

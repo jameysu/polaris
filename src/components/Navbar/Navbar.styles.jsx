@@ -9,7 +9,7 @@ const NavbarStyled = styled.div`
   align-items: center;
 
   .ant-flex {
-    padding: 10px 20px;
+    padding: 10px 30px 10px 30px;
     width: 100%;
     
     .ant-image {
