@@ -8,6 +8,7 @@ import About from "./About/About.jsx";
 import Pendings from "./Pendings/Pendings.jsx";
 import ViewDocument from "./ViewDocuments/ViewDocument.jsx";
 import {Button, Flex, Modal, Select, Typography} from "antd";
+import SetApplicationModal from "./SetApplicationModal.jsx";
 
 const {Text} = Typography;
 
@@ -44,43 +45,10 @@ function Dashboard() {
           {renderContent()}
         </div>
       </div>
-      <Modal
-        open={createTransactionModalVisible}
-        onCancel={() => setCreateTransactionModalVisible(false)}
-        footer={
-          <Flex justify="space-between">
-            <Button onClick={() => setCreateTransactionModalVisible(false)}>
-              Cancel
-            </Button>
-            <Button type="primary" onClick={() => console.log("Next clicked")}>
-              Next
-            </Button>
-          </Flex>
-        }
-      >
-       <Flex vertical gap={'small'}>
-         <Text>What is the purpose of your transaction?</Text>
-         <Select
-           placeholder="Select your transaction"
-           defaultValue={null}
-           options={[
-             {
-               value: '1',
-               label: 'Get Permit for Issuance of Certificate of Verification (COV) for the Transport of Planted Trees Within Private Land, Non-Timber Forest Products except Rattan and Bamboo.'
-             },
-             {
-               value: '2',
-               label: 'Application of Chansaw Registration'
-             },
-             {
-               value: '3',
-               label: 'Issuance of Special/Tree Cutting and/or Earth Balling permit for Trees Affected by Projects of National Government Agencies (DPWH, DOTr, DepEd, DA, DOH, CHED, DOA, and NIA)'
-             },
-           ]}
-         />
-         <Text>Requirements:</Text>
-       </Flex>
-      </Modal>
+      <SetApplicationModal
+        visible={createTransactionModalVisible}
+        setVisible={setCreateTransactionModalVisible}
+      />
     </DashboardStyled>
   );
 }

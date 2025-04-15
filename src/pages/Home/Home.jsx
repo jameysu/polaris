@@ -14,14 +14,14 @@ function Home() {
   const navigate = useNavigate();
   const [signinForm] = Form.useForm();
   const [signupForm] = Form.useForm();
-  console.log(signinForm.getFieldsValue());
-  console.log(signupForm?.getFieldsValue());
 
-  const [loading, setLoading] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [signupLoading, setSignupLoading] = useState(false);
   const [signinModalVisible, setSigninModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('signin');
   const [loginResponse, setLoginResponse] = useState({});
   const [otpModalVisible, setOtpModalVisible] = useState(false);
+  const [signupResponse, setSignupResponse] = useState({});
 
   useEffect(() => {
     const token = localStorage.getItem('auth');
@@ -32,10 +32,6 @@ function Home() {
     navigate,
   ])
 
-  const onSignup = (values) => {
-    console.log('Form values:', values);
-  };
-
   const onCloseModal = () => {
     setSigninModalVisible(false);
     signinForm.resetFields();
@@ -43,7 +39,7 @@ function Home() {
   }
 
   const onSignin = async (values) => {
-    setLoading(true);
+    setLoginLoading(true);
     try {
       const response = await http.post('/auth/login', values);
       setLoginResponse(response);
@@ -56,9 +52,27 @@ function Home() {
 
     } catch (error) {
       console.log(error);
-      message.error('Login failed: ' + (error.response?.data.message || error.message));
+      messageApi.error('Login failed: ' + (error.response?.data.message || error.message));
     } finally {
-      setLoading(false); // Stop loading
+      setLoginLoading(false);
+    }
+  };
+
+  const onSignup = async (values) => {
+    setSignupLoading(true);
+    try {
+      const response = await http.post('/auth/signup', values);
+      setSignupResponse(response);
+      if(response.success) {
+        messageApi.success({content: 'Sign Up successful!', key: 'signup-success', duration: 3});
+        setSigninModalVisible(false);
+        signupForm.resetFields();
+      }
+    } catch (error) {
+      console.log(error);
+      messageApi.error('Sign Up failed: ' + (error.response?.data.message || error.message));
+    } finally {
+      setSignupLoading(false);
     }
   };
 
@@ -117,7 +131,7 @@ function Home() {
                 <Input.Password placeholder="********" />
               </Form.Item>
 
-              <Button type="primary" htmlType="submit" style={{ width: '100%' }} loading={loading}>
+              <Button type="primary" htmlType="submit" style={{ width: '100%' }} loading={loginLoading}>
                 Sign In
               </Button>
             </Form>
@@ -127,6 +141,7 @@ function Home() {
             <Form
               form={signupForm}
               onFinish={onSignup}
+              autoComplete='off'
             >
               <Form.Item
                 name="firstname"
@@ -150,13 +165,13 @@ function Home() {
 
               <Flex gap="middle">
                 <Form.Item
-                  name="birthdate"
+                  name="birthday"
                 >
-                  <DatePicker placeholder="Date of Birth" />
+                  <DatePicker placeholder="Date of Birth" format="YYYY-MM-DD" />
                 </Form.Item>
 
                 <Form.Item
-                  name="phonenumber"
+                  name="mobile"
                   rules={[{ required: true, message: 'Please input your mobile number!' }]}
                 >
                   <Input addonBefore='+63' placeholder="Enter your Mobile Number" />
@@ -202,7 +217,7 @@ function Home() {
                 <Input.Password placeholder="Confirm Password" />
               </Form.Item>
 
-              <Button type="primary" htmlType="submit" style={{ width: '100%' }}>
+              <Button type="primary" htmlType="submit" loading={signupLoading} style={{ width: '100%' }}>
                 Sign Up
               </Button>
             </Form>
