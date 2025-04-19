@@ -1,12 +1,82 @@
 import React, { useState } from 'react';
-import {Button, Checkbox, Flex, Form, Input, Modal, Select, Table, Typography, Upload} from 'antd';
+import {
+  Button,
+  Checkbox,
+  Flex,
+  Form,
+  Input,
+  Modal,
+  Select,
+  Table,
+  Typography,
+  Upload
+} from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
 
+const transactionOptions = [
+  {
+    value: '1',
+    label: 'Get Permit for COV for the Transport of Planted Trees',
+    requirements: [
+      'Request letter indicating:\na. Type of forest product\nb. Species\nc. Estimated volume/quantity\nd. Type of conveyance and plate number\ne. Name and address of the consignee/destination\nf. Date of transport',
+      'Certification that the forest products are harvested within the area of the owner (1 original)',
+      'Approved Tree Cutting Permit for timber (1 photocopy)',
+      'OR/CR of conveyance and Driver’s License (1 photocopy)',
+      'Certificate of Transport Agreement (if not owner of conveyance)',
+      'Special Power of Attorney (SPA) (if applicant is not the land owner)'
+    ]
+  },
+  {
+    value: '2',
+    label: 'Application of Chainsaw Registration',
+    requirements: [
+      'Duly accomplished Application Form',
+      'Official Receipt of Chainsaw Purchase or Affidavit of Ownership',
+      'SPA (if applicant is not the owner of the chainsaw)',
+      'Detailed Specification of Chainsaw',
+      'Notarized Deed of Absolute Sale (if transfer of ownership)',
+      'Chainsaw to be registered',
+      'Forest Tenure Agreement (if Tenurial Instrument holder)',
+      'Business Permit (if Business Owner)',
+      'Certificate of Registration (if Private Tree Plantation Owner)',
+      'Business Permit or affidavit for legal purpose',
+      'Wood processing plant permit (if licensed Wood Processor)',
+      'Certification from Head of Office (if government)',
+      'Latest Certificate of Chainsaw Registration (if renewal)'
+    ]
+  },
+  {
+    value: '3',
+    label: 'Issuance of Special/Tree Cutting permit (Govt Projects)',
+    requirements: [
+      'Letter of Application (1 original)',
+      'LGU Endorsement/Certification of No Objection (1 original)',
+      'Approved Site/Infrastructure Plan with tree charting (1 Certified True Copy)',
+      'ECC or CNC (1 certified copy)',
+      'NCIP Clearance (if applicable)',
+      'Waiver/Consent of owner (if titled property)',
+      'PAMB Clearance/Resolution (if within Protected Area)'
+    ]
+  }
+];
+
 const SetApplicationModal = ({ visible, setVisible }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [form] = Form.useForm();
+  const [uploads, setUploads] = useState({});
+  const [formCompleted, setFormCompleted] = useState(false);
+
+  // Enable the "Next" button if a transaction is selected for Step 1
+  const isNextDisabled = (currentStep === 1 && !selectedTransaction) ||
+    (currentStep === 2 && !formCompleted) ||
+    (currentStep === 3 && !selectedTransaction.requirements.every(req => uploads[req]?.length > 0));
+
+  // Disable the Submit button if all requirements are not uploaded
+  const isSubmitDisabled = currentStep === 3 && selectedTransaction &&
+    !selectedTransaction.requirements.every(req => uploads[req]?.length > 0);
 
   const handleNext = () => {
     if (currentStep < 4) {
@@ -23,44 +93,49 @@ const SetApplicationModal = ({ visible, setVisible }) => {
   const handleFinish = () => {
     form.validateFields()
       .then(values => {
-        console.log("Submitted data:", values);
-        setCurrentStep(4); // Go to pending approval step
+        console.log("Form values:", values);
+        console.log("Uploaded files:", uploads);
+        setCurrentStep(4);
       })
       .catch(err => {
-        console.log("Validation errors:", err);
+        console.log("Validation error:", err);
       });
   };
 
-  const handleBeforeUpload = (file) => {
-    const reader = new FileReader();
-
-    reader.onloadend = () => {
-      // Log the Base64 string here
-      console.log("Base64 String:", reader.result);
-    };
-
-    reader.readAsDataURL(file); // Convert the file to Base64
-
-    // Return false to prevent the default upload action (automatic upload)
+  const handleBeforeUpload = (file, field) => {
+    setUploads(prev => ({
+      ...prev,
+      [field]: [file]
+    }));
     return false;
+  };
+
+  // Handle form value changes and check if the form is completed
+  const onValuesChange = (changedValues, allValues) => {
+    if (currentStep === 2) {
+      setFormCompleted(allValues.firstName && allValues.lastName && allValues.email && allValues.mobile);
+    }
   };
 
   const renderFooter = () => (
     <Flex justify="space-between">
       {currentStep > 1 && currentStep < 4 ? (
-        <Button onClick={handleBack} shape="round">Back</Button>
+        <Button onClick={handleBack}>Back</Button>
       ) : (
-        <Button onClick={() => setVisible(false)} shape="round">Cancel</Button>
+        <Button onClick={() => setVisible(false)}>Cancel</Button>
       )}
       {currentStep === 3 ? (
-        <Button type="primary" onClick={handleFinish} shape="round">Submit</Button>
+        <Button type="primary" onClick={handleFinish} disabled={isSubmitDisabled}>Submit</Button>
       ) : currentStep === 4 ? (
         <Button type="primary" onClick={() => {
           setVisible(false);
-          setCurrentStep(1); // Reset for next use
-        }} shape="round">Okay</Button>
+          setCurrentStep(1);
+          form.resetFields();
+          setSelectedTransaction(null);
+          setUploads({});
+        }}>Okay</Button>
       ) : (
-        <Button type="primary" onClick={handleNext} shape="round">Next</Button>
+        <Button type="primary" onClick={handleNext} disabled={isNextDisabled}>Next</Button>
       )}
     </Flex>
   );
@@ -71,7 +146,7 @@ const SetApplicationModal = ({ visible, setVisible }) => {
       onCancel={() => setVisible(false)}
       closable={false}
       footer={renderFooter()}
-      width={600}
+      width={700}
       centered
     >
       {currentStep === 1 && (
@@ -79,36 +154,38 @@ const SetApplicationModal = ({ visible, setVisible }) => {
           <Text>What is the purpose of your transaction?</Text>
           <Select
             placeholder="Select your transaction"
-            options={[
-              { value: '1', label: 'Get Permit for COV for the Transport of Planted Trees' },
-              { value: '2', label: 'Application of Chainsaw Registration' },
-              { value: '3', label: 'Issuance of Special/Tree Cutting permit (Govt Projects)' },
-            ]}
+            options={transactionOptions}
+            onChange={(value) => {
+              const transaction = transactionOptions.find(opt => opt.value === value);
+              setSelectedTransaction(transaction);
+              setUploads({});
+            }}
           />
-          <Text strong>Requirements:</Text>
-          <Paragraph>
-            <ul>
-              <li>Request letter indicating (1 original, 1 photocopy)
+          {selectedTransaction && (
+            <>
+              <Text strong>Requirements:</Text>
+              <Paragraph>
                 <ul>
-                  <li>Type of forest product</li>
-                  <li>Species</li>
-                  <li>Estimated volume/quantity</li>
-                  <li>Type of conveyance and plate number</li>
-                  <li>Name and address of the consignee/destination</li>
-                  <li>Date of transport</li>
+                  {selectedTransaction.requirements.map((req, index) => (
+                    <li key={index}>
+                      {req.includes('\n') ? (
+                        <>
+                          {req.split('\n')[0]}
+                          <ul>
+                            {req.split('\n').slice(1).map((sub, i) => (
+                              <li key={i}>{sub}</li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : (
+                        req
+                      )}
+                    </li>
+                  ))}
                 </ul>
-              </li>
-              <li>Certification that the forest products are harvested within the area of the owner (1 original)</li>
-              <li>Approved Tree Cutting Permit for timber (1 photocopy)</li>
-              <li>OR/CR of conveyance and Driver's License</li>
-              <li>Additional Requirements
-                <ul>
-                  <li>Certificate of Transport Agreement</li>
-                  <li>Special Power of Attorney (SPA)</li>
-                </ul>
-              </li>
-            </ul>
-          </Paragraph>
+              </Paragraph>
+            </>
+          )}
         </Flex>
       )}
 
@@ -119,7 +196,7 @@ const SetApplicationModal = ({ visible, setVisible }) => {
             Please provide your contact information. We will send confirmation via email.
           </Text>
 
-          <Form layout="vertical" form={form}>
+          <Form layout="vertical" form={form} onValuesChange={onValuesChange}>
             <Form.Item label="First Name" name="firstName" rules={[{ required: true }]}>
               <Input placeholder="First Name" />
             </Form.Item>
@@ -138,13 +215,7 @@ const SetApplicationModal = ({ visible, setVisible }) => {
             <Form.Item
               name="agree"
               valuePropName="checked"
-              rules={[
-                {
-                  validator: (_, value) =>
-                    value ? Promise.resolve() : Promise.reject(new Error('You must agree to continue')),
-                },
-              ]}
-            >
+              rules={[{ validator: (_, value) => value ? Promise.resolve() : Promise.reject(new Error('You must agree to continue')) }]}>
               <Checkbox>
                 I agree to the collection and use of the data I will provide through this form by DENR
               </Checkbox>
@@ -153,32 +224,38 @@ const SetApplicationModal = ({ visible, setVisible }) => {
         </Flex>
       )}
 
-      {currentStep === 3 && (
+      {currentStep === 3 && selectedTransaction && (
         <>
           <Text>Please upload the required documents:</Text>
           <Table
-            showHeader={false}
-            pagination={false}
-            dataSource={[
-              'Application Form',
-              'Letter Request',
-              'Certificate of Forest Products',
-              'Approved Tree Cutting Permit',
-              "OR/CR of Conveyance and Driver's License",
-              'Additional Requirements',
-            ].map((label, index) => ({
+            dataSource={selectedTransaction.requirements.map((req, index) => ({
               key: index,
-              name: label,
+              label: req,
+              fileList: uploads[req] || [],
             }))}
+            pagination={false}
             columns={[
               {
-                dataIndex: 'name',
-                key: 'name',
+                title: 'Requirement',
+                dataIndex: 'label',
+                key: 'label',
+                render: (text) => <div style={{ whiteSpace: 'pre-wrap' }}>{text}</div>,
               },
               {
+                title: 'Upload',
                 key: 'upload',
                 render: (_, record) => (
-                  <Upload name="file" maxCount={1} beforeUpload={handleBeforeUpload}>
+                  <Upload
+                    beforeUpload={(file) => handleBeforeUpload(file, record.label)}
+                    fileList={record.fileList}
+                    onRemove={() =>
+                      setUploads(prev => {
+                        const updated = { ...prev };
+                        delete updated[record.label];
+                        return updated;
+                      })
+                    }
+                  >
                     <Button icon={<UploadOutlined />}>Upload</Button>
                   </Upload>
                 ),
