@@ -9,9 +9,11 @@ import {
   Select,
   Table,
   Typography,
-  Upload
+  Upload,
+  message
 } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { UploadOutlined, CheckCircleTwoTone } from '@ant-design/icons';
+import http from '../../utils/http.js';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -68,18 +70,26 @@ const SetApplicationModal = ({ visible, setVisible }) => {
   const [form] = Form.useForm();
   const [uploads, setUploads] = useState({});
   const [formCompleted, setFormCompleted] = useState(false);
+  const [personalInfo, setPersonalInfo] = useState(null);
 
-  // Enable the "Next" button if a transaction is selected for Step 1
   const isNextDisabled = (currentStep === 1 && !selectedTransaction) ||
     (currentStep === 2 && !formCompleted) ||
     (currentStep === 3 && !selectedTransaction.requirements.every(req => uploads[req]?.length > 0));
 
-  // Disable the Submit button if all requirements are not uploaded
   const isSubmitDisabled = currentStep === 3 && selectedTransaction &&
     !selectedTransaction.requirements.every(req => uploads[req]?.length > 0);
 
   const handleNext = () => {
-    if (currentStep < 4) {
+    if (currentStep === 2) {
+      form.validateFields()
+        .then(values => {
+          setPersonalInfo(values);
+          setCurrentStep(prev => prev + 1);
+        })
+        .catch(() => {
+          message.error("Please complete all required fields.");
+        });
+    } else {
       setCurrentStep(prev => prev + 1);
     }
   };
@@ -90,16 +100,45 @@ const SetApplicationModal = ({ visible, setVisible }) => {
     }
   };
 
-  const handleFinish = () => {
-    form.validateFields()
-      .then(values => {
-        console.log("Form values:", values);
-        console.log("Uploaded files:", uploads);
-        setCurrentStep(4);
-      })
-      .catch(err => {
-        console.log("Validation error:", err);
+  const handleFinish = async () => {
+    const identity = JSON.parse(localStorage.getItem('identity'));
+    const { firstName, middleName, lastName, email, mobile } = personalInfo;
+
+    const applicationData = {
+      firstname: firstName,
+      middlename: middleName,
+      lastname: lastName,
+      email,
+      mobile,
+      applicationtype: parseInt(selectedTransaction.value),
+      userId: identity.userDetail.userId,
+    };
+
+    try {
+      const applicationResponse = await http.post('/application/request', applicationData);
+
+      const formDataForUpload = new FormData();
+      selectedTransaction.requirements.forEach((req) => {
+        if (uploads[req] && uploads[req].length > 0) {
+          uploads[req].forEach(file => {
+            formDataForUpload.append('files', file);
+          });
+        }
       });
+
+      await http.post(`/application/upload-file/${applicationResponse.data.applicationno}`, formDataForUpload, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setCurrentStep(4);
+      message.success('Your application has been submitted successfully.');
+
+    } catch (error) {
+      console.error('Error occurred:', error);
+      message.error('Failed to submit application. Please try again.');
+    }
   };
 
   const handleBeforeUpload = (file, field) => {
@@ -110,7 +149,6 @@ const SetApplicationModal = ({ visible, setVisible }) => {
     return false;
   };
 
-  // Handle form value changes and check if the form is completed
   const onValuesChange = (changedValues, allValues) => {
     if (currentStep === 2) {
       setFormCompleted(allValues.firstName && allValues.lastName && allValues.email && allValues.mobile);
@@ -144,10 +182,11 @@ const SetApplicationModal = ({ visible, setVisible }) => {
     <Modal
       open={visible}
       onCancel={() => setVisible(false)}
-      closable={false}
       footer={renderFooter()}
       width={700}
       centered
+      destroyOnClose
+      maskClosable={false}
     >
       {currentStep === 1 && (
         <Flex vertical gap="middle">
@@ -195,7 +234,6 @@ const SetApplicationModal = ({ visible, setVisible }) => {
           <Text type="secondary" style={{ textAlign: 'center' }}>
             Please provide your contact information. We will send confirmation via email.
           </Text>
-
           <Form layout="vertical" form={form} onValuesChange={onValuesChange}>
             <Form.Item label="First Name" name="firstName" rules={[{ required: true }]}>
               <Input placeholder="First Name" />
@@ -215,7 +253,8 @@ const SetApplicationModal = ({ visible, setVisible }) => {
             <Form.Item
               name="agree"
               valuePropName="checked"
-              rules={[{ validator: (_, value) => value ? Promise.resolve() : Promise.reject(new Error('You must agree to continue')) }]}>
+              rules={[{ validator: (_, value) => value ? Promise.resolve() : Promise.reject(new Error('You must agree to continue')) }]}
+            >
               <Checkbox>
                 I agree to the collection and use of the data I will provide through this form by DENR
               </Checkbox>
@@ -244,17 +283,14 @@ const SetApplicationModal = ({ visible, setVisible }) => {
               {
                 title: 'Upload',
                 key: 'upload',
-                render: (_, record) => (
+                render: (text, record) => (
                   <Upload
                     beforeUpload={(file) => handleBeforeUpload(file, record.label)}
                     fileList={record.fileList}
-                    onRemove={() =>
-                      setUploads(prev => {
-                        const updated = { ...prev };
-                        delete updated[record.label];
-                        return updated;
-                      })
-                    }
+                    listType="picture"
+                    maxCount={1}
+                    showUploadList={{ showPreviewIcon: false, showRemoveIcon: true }}
+                    onRemove={() => setUploads(prev => ({ ...prev, [record.label]: [] }))}
                   >
                     <Button icon={<UploadOutlined />}>Upload</Button>
                   </Upload>
@@ -266,11 +302,14 @@ const SetApplicationModal = ({ visible, setVisible }) => {
       )}
 
       {currentStep === 4 && (
-        <Flex vertical align="center" justify="center" gap="middle" style={{ padding: '2rem 0' }}>
-          <Title level={3}>Pending for Approval</Title>
-          <Text type="secondary" style={{ textAlign: 'center', maxWidth: 400 }}>
-            Your application has been submitted successfully and is currently pending for approval. You will be notified via email once processed.
-          </Text>
+        <Flex vertical align="center" gap="middle">
+          <CheckCircleTwoTone twoToneColor="#52c41a" style={{ fontSize: 48 }} />
+          <Title level={3}>Submission Complete</Title>
+          <Text type="success">Your application has been submitted successfully!</Text>
+          <Paragraph style={{ textAlign: 'center', maxWidth: 500 }}>
+            You will receive a confirmation email shortly. Please keep track of your application status
+            through your dashboard or contact our office for inquiries.
+          </Paragraph>
         </Flex>
       )}
     </Modal>

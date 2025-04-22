@@ -27,14 +27,6 @@ const items = [
     ],
   },
   {
-    key: 'account',
-    label: 'Account',
-    icon: <UserOutlined />,
-    children: [
-      { key: 'user', label: 'User' },
-    ],
-  },
-  {
     key: 'about',
     label: 'About',
     icon: <InfoCircleOutlined />,

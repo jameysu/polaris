@@ -7,7 +7,7 @@ import {useNavigate} from "react-router-dom";
 
 const { Text } = Typography;
 
-const OtpModal = ({ visible, setVisible, loginResponse }) => {
+const OtpModal = ({ visible, setVisible, loginResponse, setLoggingIn }) => {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
 
@@ -30,7 +30,10 @@ const OtpModal = ({ visible, setVisible, loginResponse }) => {
         setOtp('');
         localStorage.setItem('identity', JSON.stringify(response));
         localStorage.setItem('auth', loginResponse?.otpJWT);
-        navigate('/dashboard');
+        setTimeout(() => {
+          setLoggingIn(true);
+          navigate('/dashboard');
+        }, 3000)
       }
     } catch (error) {
       console.log(error);

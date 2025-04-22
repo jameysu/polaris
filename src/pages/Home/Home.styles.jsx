@@ -1,16 +1,26 @@
-import styled from 'styled-components';
-import {memo} from "react";
+import styled, { createGlobalStyle } from 'styled-components';
+import { memo } from 'react';
+
+// Add this global style to remove scrollbars from body/html
+export const GlobalStyle = createGlobalStyle`
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+  }
+`;
 
 const HomeStyled = styled.div`
-  width: 100%;
   height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 10px;
   position: relative;
-  overflow: hidden;
+  text-align: center;
 
   &::before {
     content: "";
@@ -19,11 +29,10 @@ const HomeStyled = styled.div`
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('https://forestry.denr.gov.ph/fmb_web/wp-content/uploads/2023/04/banner1.png');
+    background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://forestry.denr.gov.ph/fmb_web/wp-content/uploads/2023/04/banner1.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    opacity: 0.8;
     z-index: 0;
   }
 
@@ -33,7 +42,8 @@ const HomeStyled = styled.div`
   }
 
   .ant-image {
-    max-width: 250px;
+    max-width: 180px;
+    margin-bottom: 10px;
     animation: bounceIn 1.2s ease-out;
   }
 
@@ -41,7 +51,12 @@ const HomeStyled = styled.div`
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+
+    .ant-typography {
+      color: white;
+      text-align: center;
+    }
 
     .ph-text,
     .denr-cenro-text,
@@ -54,26 +69,42 @@ const HomeStyled = styled.div`
     .ph-text {
       animation-delay: 0.3s;
       font-size: 18px;
-      text-decoration: underline;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #e0e0e0;
     }
 
     .denr-cenro-text {
       animation-delay: 0.5s;
-      font-size: 25px;
+      font-size: 26px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #ffffff;
+      max-width: 800px;
     }
 
     .other-text {
       animation-delay: 0.7s;
-      font-size: 20px;
+      font-size: 18px;
+      color: #d5d5d5;
     }
 
     .continue-btn {
-      width: 150px;
-      height: 40px;
-      padding: 0;
-      margin-top: 10px;
+      width: 160px;
+      height: 45px;
+      font-size: 16px;
+      margin-top: 12px;
+      border-radius: 6px;
+      background-color: #006400;
+      border: none;
+      transition: all 0.3s ease;
       animation: fadeInUp 0.8s ease forwards;
       animation-delay: 0.9s;
+
+      &:hover {
+        background-color: #228B22;
+        transform: translateY(-2px);
+      }
 
       a {
         width: 100%;
@@ -102,22 +133,33 @@ const HomeStyled = styled.div`
     }
   }
 
-  @keyframes pulse {
-    0%, 100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.05);
-    }
-  }
-
   @keyframes fadeInUp {
     to {
       opacity: 1;
       transform: translateY(0);
     }
   }
-`;
 
+  @media (max-width: 768px) {
+    .ant-image {
+      max-width: 140px;
+    }
+
+    .denr-cenro-text {
+      font-size: 20px;
+    }
+
+    .ph-text,
+    .other-text {
+      font-size: 16px;
+    }
+
+    .continue-btn {
+      width: 140px;
+      height: 40px;
+      font-size: 14px;
+    }
+  }
+`;
 
 export default memo(HomeStyled);

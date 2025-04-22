@@ -24,8 +24,6 @@ function Dashboard() {
         return <Pendings />;
       case 'view-document':
         return <ViewDocument />;
-      case 'user':
-        return <User />;
       case 'about':
         return <About />;
       default:
