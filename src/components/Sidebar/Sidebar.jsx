@@ -1,53 +1,59 @@
 import React from 'react';
-import { AppstoreOutlined, HomeOutlined, PlusOutlined, BellOutlined, UserOutlined, InfoCircleOutlined } from '@ant-design/icons';
-import {Button, Menu} from 'antd';
+import {
+  AppstoreOutlined,
+  HomeOutlined,
+  PlusOutlined,
+  UserOutlined,
+  InfoCircleOutlined
+} from '@ant-design/icons';
+import { Button, Menu } from 'antd';
+import { Link, useLocation } from 'react-router-dom';
 
-const items = [
-  {
-    key: 'create-application',
-    style: {padding: 0, marginTop: 0},
-    label: (
-      <Button type="primary" block icon={<PlusOutlined />} style={{ textAlign: 'left'}}>
-        Set Application
-      </Button>
-    ),
-  },
-  {
-    key: 'home',
-    label: 'Home',
-    icon: <HomeOutlined />,
-  },
-  {
-    key: 'summary',
-    label: 'Summary',
-    icon: <AppstoreOutlined />,
-    children: [
-      { key: 'pendings', label: 'Pendings' },
-      { key: 'view-document', label: 'View Document' },
-    ],
-  },
-  {
-    key: 'about',
-    label: 'About',
-    icon: <InfoCircleOutlined />,
-  },
-];
+const Sidebar = ({ setCreateTransactionModalVisible }) => {
+  const location = useLocation();
 
-const Sidebar = ({ onMenuSelect, setCreateTransactionModalVisible }) => {
-  const onClick = e => {
-    const { key } = e;
-    if (key === 'create-application') {
-      setCreateTransactionModalVisible(true);
-      return;
-    }
-    onMenuSelect(key);
-  };
+  const items = [
+    {
+      key: 'create-application',
+      style: { padding: 0, marginTop: 0 },
+      label: (
+        <Button
+          type="primary"
+          block
+          icon={<PlusOutlined />}
+          style={{ textAlign: 'left' }}
+          onClick={() => setCreateTransactionModalVisible(true)}
+        >
+          Set Application
+        </Button>
+      ),
+    },
+    {
+      key: 'home',
+      label: <Link to="/dashboard/home">Home</Link>,
+      icon: <HomeOutlined />,
+    },
+    {
+      key: 'application',
+      label: <Link to="/dashboard/application">Application</Link>,
+      icon: <AppstoreOutlined />,
+    },
+    {
+      key: 'user',
+      label: <Link to="/dashboard/user">User</Link>,
+      icon: <UserOutlined />,
+    },
+    {
+      key: 'about',
+      label: <Link to="/dashboard/about">About</Link>,
+      icon: <InfoCircleOutlined />,
+    },
+  ];
 
   return (
     <Menu
-      onClick={onClick}
+      selectedKeys={[location.pathname.replace("/", "") || 'home']}
       style={{ width: 256, height: '100%' }}
-      defaultSelectedKeys={['home']}
       mode="inline"
       items={items}
     />

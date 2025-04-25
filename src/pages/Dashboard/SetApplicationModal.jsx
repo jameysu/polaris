@@ -71,6 +71,7 @@ const SetApplicationModal = ({ visible, setVisible }) => {
   const [uploads, setUploads] = useState({});
   const [formCompleted, setFormCompleted] = useState(false);
   const [personalInfo, setPersonalInfo] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isNextDisabled = (currentStep === 1 && !selectedTransaction) ||
     (currentStep === 2 && !formCompleted) ||
@@ -78,6 +79,19 @@ const SetApplicationModal = ({ visible, setVisible }) => {
 
   const isSubmitDisabled = currentStep === 3 && selectedTransaction &&
     !selectedTransaction.requirements.every(req => uploads[req]?.length > 0);
+
+  const resetModal = () => {
+    setVisible(false);
+    setCurrentStep(1);
+    setSelectedTransaction(null);
+    setUploads({});
+    setFormCompleted(false);
+    form.resetFields();
+    setIsSubmitting(false);
+    if(currentStep === 4) {
+      location.reload();
+    }
+  };
 
   const handleNext = () => {
     if (currentStep === 2) {
@@ -101,6 +115,9 @@ const SetApplicationModal = ({ visible, setVisible }) => {
   };
 
   const handleFinish = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     const identity = JSON.parse(localStorage.getItem('identity'));
     const { firstName, middleName, lastName, email, mobile } = personalInfo;
 
@@ -111,7 +128,7 @@ const SetApplicationModal = ({ visible, setVisible }) => {
       email,
       mobile,
       applicationtype: parseInt(selectedTransaction.value),
-      userId: identity.userDetail.userId,
+      userid: identity.userDetail.userid,
     };
 
     try {
@@ -134,10 +151,11 @@ const SetApplicationModal = ({ visible, setVisible }) => {
 
       setCurrentStep(4);
       message.success('Your application has been submitted successfully.');
-
     } catch (error) {
       console.error('Error occurred:', error);
       message.error('Failed to submit application. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -160,18 +178,14 @@ const SetApplicationModal = ({ visible, setVisible }) => {
       {currentStep > 1 && currentStep < 4 ? (
         <Button onClick={handleBack}>Back</Button>
       ) : (
-        <Button onClick={() => setVisible(false)}>Cancel</Button>
+        <Button onClick={resetModal}>Cancel</Button>
       )}
       {currentStep === 3 ? (
-        <Button type="primary" onClick={handleFinish} disabled={isSubmitDisabled}>Submit</Button>
+        <Button type="primary" onClick={handleFinish} disabled={isSubmitDisabled || isSubmitting}>
+          {isSubmitting ? 'Submitting...' : 'Submit'}
+        </Button>
       ) : currentStep === 4 ? (
-        <Button type="primary" onClick={() => {
-          setVisible(false);
-          setCurrentStep(1);
-          form.resetFields();
-          setSelectedTransaction(null);
-          setUploads({});
-        }}>Okay</Button>
+        <Button type="primary" onClick={resetModal}>Okay</Button>
       ) : (
         <Button type="primary" onClick={handleNext} disabled={isNextDisabled}>Next</Button>
       )}
@@ -181,7 +195,7 @@ const SetApplicationModal = ({ visible, setVisible }) => {
   return (
     <Modal
       open={visible}
-      onCancel={() => setVisible(false)}
+      onCancel={resetModal}
       footer={renderFooter()}
       width={700}
       centered

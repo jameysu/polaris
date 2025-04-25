@@ -1,46 +1,30 @@
 import React, { useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from "../../components/Navbar/Navbar.jsx";
 import Sidebar from "../../components/Sidebar/Sidebar.jsx";
 import DashboardStyled from "./Dashboard.styles.jsx";
 import Home from "./Home/Home.jsx";
-import User from "./User/User.jsx";
 import About from "./About/About.jsx";
-import Pendings from "./Pendings/Pendings.jsx";
-import ViewDocument from "./ViewDocuments/ViewDocument.jsx";
-import {Button, Flex, Modal, Select, Typography} from "antd";
 import SetApplicationModal from "./SetApplicationModal.jsx";
-
-const {Text} = Typography;
+import Application from "./Application/Application.jsx";
+import User from "./User/User.jsx";
 
 function Dashboard() {
-  const [selectedKey, setSelectedKey] = useState('1');
   const [createTransactionModalVisible, setCreateTransactionModalVisible] = useState(false);
-
-  const renderContent = () => {
-    switch (selectedKey) {
-      case 'home':
-        return <Home />;
-      case 'pendings':
-        return <Pendings />;
-      case 'view-document':
-        return <ViewDocument />;
-      case 'about':
-        return <About />;
-      default:
-        return <Home />;
-    }
-  };
 
   return (
     <DashboardStyled>
       <Navbar />
       <div style={{ display: 'flex', height: '100%' }}>
-        <Sidebar
-          onMenuSelect={setSelectedKey}
-          setCreateTransactionModalVisible={setCreateTransactionModalVisible}
-        />
-        <div style={{ flex: 1}}>
-          {renderContent()}
+        <Sidebar setCreateTransactionModalVisible={setCreateTransactionModalVisible} />
+        <div style={{ flex: 1 }}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard/home" replace />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/application" element={<Application />} />
+            <Route path="/user" element={<User />} />
+            <Route path="/about" element={<About />} />
+          </Routes>
         </div>
       </div>
       <SetApplicationModal

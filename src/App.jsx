@@ -22,7 +22,7 @@ function App() {
       <ThemeProvider>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
+          <Route path="/dashboard/*" element={<ProtectedRoute element={<Dashboard />} />} />
           <Route path="/*" element={<NotFound />} />
         </Routes>
       </ThemeProvider>
