@@ -12,17 +12,24 @@ import User from "./User/User.jsx";
 function Dashboard() {
   const [createTransactionModalVisible, setCreateTransactionModalVisible] = useState(false);
 
+  const identity = JSON.parse(localStorage.getItem("identity"));
+
   return (
     <DashboardStyled>
       <Navbar />
       <div style={{ display: 'flex', height: '100%' }}>
-        <Sidebar setCreateTransactionModalVisible={setCreateTransactionModalVisible} />
+        <Sidebar
+          setCreateTransactionModalVisible={setCreateTransactionModalVisible}
+          identity={identity}
+        />
         <div style={{ flex: 1 }}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard/home" replace />} />
             <Route path="/home" element={<Home />} />
             <Route path="/application" element={<Application />} />
-            <Route path="/user" element={<User />} />
+            {identity.userJSON.usertype === 1 && (
+              <Route path="/user" element={<User />} />
+            )}
             <Route path="/about" element={<About />} />
           </Routes>
         </div>

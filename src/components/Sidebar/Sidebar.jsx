@@ -9,7 +9,7 @@ import {
 import { Button, Menu } from 'antd';
 import { Link, useLocation } from 'react-router-dom';
 
-const Sidebar = ({ setCreateTransactionModalVisible }) => {
+const Sidebar = ({ setCreateTransactionModalVisible, identity }) => {
   const location = useLocation();
 
   const items = [
@@ -38,11 +38,15 @@ const Sidebar = ({ setCreateTransactionModalVisible }) => {
       label: <Link to="/dashboard/application">Application</Link>,
       icon: <AppstoreOutlined />,
     },
-    {
-      key: 'user',
-      label: <Link to="/dashboard/user">User</Link>,
-      icon: <UserOutlined />,
-    },
+    ...(identity.userJSON.usertype === 1
+      ? [
+        {
+          key: 'user',
+          label: <Link to="/dashboard/user">User</Link>,
+          icon: <UserOutlined />,
+        },
+      ]
+      : []),
     {
       key: 'about',
       label: <Link to="/dashboard/about">About</Link>,
