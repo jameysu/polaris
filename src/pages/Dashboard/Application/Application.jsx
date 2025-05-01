@@ -1,8 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Typography, Tag, message, Button, Space, Popconfirm, Modal, Descriptions, List } from 'antd';
+import {
+  Table,
+  Typography,
+  Tag,
+  message,
+  Button,
+  Space,
+  Popconfirm,
+  Modal,
+  Descriptions,
+  List,
+  Select,
+} from 'antd';
 import http from '../../../utils/http.js';
 
 const { Title } = Typography;
+const { Option } = Select;
 
 const transactionTypes = {
   1: 'RO-F-03a - Permit for COV (Transport of Planted Trees)',
@@ -10,14 +23,27 @@ const transactionTypes = {
   3: 'RO-F-05 - Tree Cutting Permit (Govt Projects)',
 };
 
+const personnelOptions = [
+  { label: 'RECEIVING/RELEASING CLERK', value: 3 },
+  { label: 'CENR OFFICER', value: 4 },
+  { label: 'CHIEF RPS', value: 5 },
+  { label: 'DEPUTY CENR OFFICER', value: 6 },
+  { label: 'INSPECTION TEAM RPS/TSD', value: 7 },
+  { label: 'TECHNICAL STAFF CONCERNED', value: 8 },
+];
+
 function Application() {
-  const [applications, setApplications] = useState([]);
+  const [applications, setApplications] = useState(null);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
-
   const [viewDocumentsModalVisible, setViewDocumentsModalVisible] = useState(false);
   const [documents, setDocuments] = useState([]);
+  const [newAssignee, setNewAssignee] = useState(null);
+  const [selectedPersonnelType, setSelectedPersonnelType] = useState(null);
+  const [availableUsers, setAvailableUsers] = useState([]);
+  console.log("availableUsers", availableUsers)
 
   const identity = JSON.parse(localStorage.getItem('identity'));
 
@@ -25,7 +51,6 @@ function Application() {
     const fetchApplications = async () => {
       try {
         setLoading(true);
-        const identity = JSON.parse(localStorage.getItem('identity'));
         let response;
         if (identity.userJSON.usertype === 2) {
           response = await http.get(`/applications/request/${identity.userDetail.userid}`);
@@ -40,41 +65,19 @@ function Application() {
       }
     };
 
-    if (applications.length === 0) {
+    if (!applications) {
       fetchApplications();
     }
-  }, [applications]);
+  }, [applications, identity]);
 
-  const handleApprove = async (applicationNo) => {
+  const updateApplicationStatus = async (applicationNo, status) => {
     try {
-      await http.post(`/application/approve/${applicationNo}`);
-      message.success('Application approved successfully');
-      setApplications([]);
+      await http.patch(`/application/${applicationNo}/status`, { applicationstatus: status });
+      message.success('Application status updated successfully');
+      setApplications(null);
       setModalVisible(false);
-    } catch (error) {
-      message.error('Failed to approve application');
-    }
-  };
-
-  const handleReject = async (applicationNo) => {
-    try {
-      await http.post(`/application/reject/${applicationNo}`);
-      message.success('Application rejected successfully');
-      setApplications([]);
-      setModalVisible(false);
-    } catch (error) {
-      message.error('Failed to reject application');
-    }
-  };
-
-  const handlePending = async (applicationNo) => {
-    try {
-      await http.post(`/application/mark-pending/${applicationNo}`);
-      message.success('Application marked with pending requirements');
-      setApplications([]);
-      setModalVisible(false);
-    } catch (error) {
-      message.error('Failed to mark application as pending');
+    } catch {
+      message.error('Failed to update application status');
     }
   };
 
@@ -83,7 +86,7 @@ function Application() {
       const response = await http.get(`/application/documents/${applicationNo}`);
       setDocuments(response.documents || []);
       setViewDocumentsModalVisible(true);
-    } catch (error) {
+    } catch {
       message.error('Failed to fetch documents');
     }
   };
@@ -93,9 +96,39 @@ function Application() {
     setModalVisible(true);
   };
 
-  const closeModal = () => {
-    setModalVisible(false);
-    setSelectedRecord(null);
+  const openAssignModal = (record) => {
+    setSelectedRecord(record);
+    setSelectedPersonnelType(null);
+    setAvailableUsers([]);
+    setNewAssignee(null);
+    setAssignModalVisible(true);
+  };
+
+  const fetchUsersByType = async (type) => {
+    try {
+      const response = await http.get('/auth/users-by-usertype', {
+        params: { usertype: type },
+      });
+      setAvailableUsers(response.data);
+    } catch {
+      message.error('Failed to fetch users');
+    }
+  };
+
+  const handleAssigneeChange = async () => {
+    if (!newAssignee) return message.warning('Please select an assignee');
+
+    try {
+      await http.patch(`/application/assign-personnel`, {
+        applicationno: selectedRecord.applicationno,
+        userid: newAssignee,
+      });
+      message.success('Assignee updated successfully');
+      setApplications(null);
+      setAssignModalVisible(false);
+    } catch {
+      message.error('Failed to update assignee');
+    }
   };
 
   const columns = [
@@ -131,16 +164,11 @@ function Application() {
       key: 'applicationstatus',
       render: (status) => {
         switch (status) {
-          case 1:
-            return <Tag color="blue">PENDING</Tag>;
-          case 2:
-            return <Tag color="green">APPROVED</Tag>;
-          case 3:
-            return <Tag color="warning">WITH PENDING REQUIREMENTS</Tag>;
-          case 4:
-            return <Tag color="red">REJECTED</Tag>;
-          default:
-            return null;
+          case 1: return <Tag color="blue">PENDING</Tag>;
+          case 2: return <Tag color="green">APPROVED</Tag>;
+          case 3: return <Tag color="orange">WITH PENDING REQUIREMENTS</Tag>;
+          case 4: return <Tag color="red">REJECTED</Tag>;
+          default: return null;
         }
       },
     },
@@ -151,9 +179,10 @@ function Application() {
       title: '',
       key: 'action',
       render: (_, record) => (
-        <Button type="link" onClick={() => openManageModal(record)}>
-          Manage
-        </Button>
+        <Space>
+          <Button type="link" onClick={() => openManageModal(record)}>Manage</Button>
+          <Button type="link" onClick={() => openAssignModal(record)}>Assign</Button>
+        </Space>
       ),
     });
   }
@@ -168,12 +197,12 @@ function Application() {
         loading={loading}
       />
 
-      {/* Main Manage Modal */}
+      {/* Manage Modal */}
       {selectedRecord && (
         <Modal
           open={modalVisible}
           title="Manage Application"
-          onCancel={closeModal}
+          onCancel={() => setModalVisible(false)}
           footer={null}
           centered
         >
@@ -188,7 +217,7 @@ function Application() {
                 switch (selectedRecord.applicationstatus) {
                   case 1: return <Tag color="blue">PENDING</Tag>;
                   case 2: return <Tag color="green">APPROVED</Tag>;
-                  case 3: return <Tag color="warning">WITH PENDING REQUIREMENTS</Tag>;
+                  case 3: return <Tag color="orange">WITH PENDING REQUIREMENTS</Tag>;
                   case 4: return <Tag color="red">REJECTED</Tag>;
                   default: return 'Unknown';
                 }
@@ -198,50 +227,91 @@ function Application() {
 
           <div style={{ marginTop: 24 }}>
             <Space wrap style={{ width: '100%' }}>
-              <Button
-                type="default"
-                block
-                onClick={() => handleViewDocuments(selectedRecord.applicationno)}
-              >
+              <Button type="default" block onClick={() => handleViewDocuments(selectedRecord.applicationno)}>
                 View Documents
               </Button>
-
               <Popconfirm
                 title="Are you sure you want to approve this application?"
-                onConfirm={() => handleApprove(selectedRecord.applicationno)}
-                okText="Yes"
-                cancelText="No"
+                onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 2)}
               >
-                <Button type="primary" block>
-                  Approve
-                </Button>
+                <Button type="primary" block>Approve</Button>
               </Popconfirm>
-
               <Popconfirm
                 title="Are you sure you want to reject this application?"
-                onConfirm={() => handleReject(selectedRecord.applicationno)}
-                okText="Yes"
-                cancelText="No"
+                onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 4)}
               >
-                <Button danger block>
-                  Reject
-                </Button>
+                <Button danger block>Reject</Button>
               </Popconfirm>
-
               <Popconfirm
                 title="Mark application with pending requirements?"
-                onConfirm={() => handlePending(selectedRecord.applicationno)}
-                okText="Yes"
-                cancelText="No"
+                onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 3)}
               >
-                <Button type="default" block>
-                  Mark Pending
-                </Button>
+                <Button block>Mark Pending</Button>
               </Popconfirm>
             </Space>
           </div>
         </Modal>
       )}
+
+      {/* Assign Modal */}
+      <Modal
+        open={assignModalVisible}
+        title="Assign Application"
+        onCancel={() => setAssignModalVisible(false)}
+        footer={null}
+        centered
+        maskClosable={false}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <label>Select Personnel Type</label>
+          <Select
+            style={{ width: '100%' }}
+            placeholder="Choose personnel type"
+            onChange={(value) => {
+              setSelectedPersonnelType(value);
+              setNewAssignee(null); // Clear selected user
+              fetchUsersByType(value);
+            }}
+            value={selectedPersonnelType}
+          >
+          {personnelOptions.map((option) => (
+              <Option key={option.value} value={option.value}>
+                {option.label}
+              </Option>
+            ))}
+          </Select>
+        </div>
+
+        {selectedPersonnelType && (
+          <div style={{ marginBottom: 16 }}>
+            <label>Select User</label>
+            <Select
+              key={selectedPersonnelType}
+              style={{ width: '100%' }}
+              placeholder="Choose user"
+              value={newAssignee}
+              onChange={setNewAssignee}
+            >
+              {availableUsers.map((user) => (
+                <Option key={user.userid} value={user.userid}>
+                  {user.UserDetail
+                    ? `${user.UserDetail.firstname} ${user.UserDetail.lastname}`
+                    : user.username}
+                </Option>
+              ))}
+            </Select>
+          </div>
+        )}
+
+        <Button
+          type="primary"
+          block
+          onClick={handleAssigneeChange}
+          disabled={!selectedPersonnelType || !newAssignee}
+        >
+          Assign to User
+        </Button>
+      </Modal>
 
       {/* View Documents Modal */}
       <Modal
@@ -255,7 +325,9 @@ function Application() {
           dataSource={documents}
           renderItem={(item) => (
             <List.Item>
-              <a href={item.url} target="_blank" rel="noopener noreferrer">{item.filename}</a>
+              <a href={item.url} target="_blank" rel="noopener noreferrer">
+                {item.filename}
+              </a>
             </List.Item>
           )}
           locale={{ emptyText: 'No documents uploaded.' }}
