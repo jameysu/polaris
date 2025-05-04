@@ -9,13 +9,14 @@ import {
   Popconfirm,
   Modal,
   Descriptions,
-  List,
   Select,
+  Input,
 } from 'antd';
 import http from '../../../utils/http.js';
 
 const { Title } = Typography;
 const { Option } = Select;
+const { Search } = Input;
 
 const transactionTypes = {
   1: 'RO-F-03a - Permit for COV (Transport of Planted Trees)',
@@ -33,7 +34,8 @@ const personnelOptions = [
 ];
 
 function Application() {
-  const [applications, setApplications] = useState(null);
+  const [applications, setApplications] = useState([]);
+  const [filteredApps, setFilteredApps] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [assignModalVisible, setAssignModalVisible] = useState(false);
@@ -43,52 +45,60 @@ function Application() {
   const [newAssignee, setNewAssignee] = useState(null);
   const [selectedPersonnelType, setSelectedPersonnelType] = useState(null);
   const [availableUsers, setAvailableUsers] = useState([]);
-  console.log("availableUsers", availableUsers)
+  const [searchText, setSearchText] = useState('');
 
   const identity = JSON.parse(localStorage.getItem('identity'));
 
-  useEffect(() => {
-    const fetchApplications = async () => {
-      try {
-        setLoading(true);
-        let response;
-        if (identity.userJSON.usertype === 2) {
-          response = await http.get(`/applications/request/${identity.userDetail.userid}`);
-        } else {
-          response = await http.get(`/application/request-search`);
-        }
-        setApplications(response.applications);
-      } catch (error) {
-        message.error('Failed to fetch applications. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchApplications = async () => {
+    try {
+      setLoading(true);
+      const response = await http.get(`/application/request-search`);
+      const { applications, uploadedFiles } = response;
 
-    if (!applications) {
-      fetchApplications();
+      const appsWithDocs = applications.map((app) => ({
+        ...app,
+        files: uploadedFiles.filter((file) => file.applicationno === app.applicationno),
+      }));
+
+      setApplications(appsWithDocs);
+      setFilteredApps(appsWithDocs);
+    } catch (error) {
+      message.error('Failed to fetch applications. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  }, [applications, identity]);
+  };
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
+
+  const handleSearch = (value) => {
+    const lower = value.toLowerCase();
+    const filtered = applications.filter((app) =>
+      app.firstname.toLowerCase().includes(lower) ||
+      app.lastname.toLowerCase().includes(lower) ||
+      app.applicationno.toString().includes(lower) ||
+      app.mobile.includes(lower)
+    );
+    setFilteredApps(filtered);
+    setSearchText(value);
+  };
 
   const updateApplicationStatus = async (applicationNo, status) => {
     try {
       await http.patch(`/application/${applicationNo}/status`, { applicationstatus: status });
       message.success('Application status updated successfully');
-      setApplications(null);
+      await fetchApplications();
       setModalVisible(false);
     } catch {
       message.error('Failed to update application status');
     }
   };
 
-  const handleViewDocuments = async (applicationNo) => {
-    try {
-      const response = await http.get(`/application/documents/${applicationNo}`);
-      setDocuments(response.documents || []);
-      setViewDocumentsModalVisible(true);
-    } catch {
-      message.error('Failed to fetch documents');
-    }
+  const handleViewDocuments = (record) => {
+    setDocuments(record.files || []);
+    setViewDocumentsModalVisible(true);
   };
 
   const openManageModal = (record) => {
@@ -124,7 +134,7 @@ function Application() {
         userid: newAssignee,
       });
       message.success('Assignee updated successfully');
-      setApplications(null);
+      await fetchApplications();
       setAssignModalVisible(false);
     } catch {
       message.error('Failed to update assignee');
@@ -172,86 +182,131 @@ function Application() {
         }
       },
     },
-  ];
-
-  if (identity.userJSON.usertype === 1) {
-    columns.push({
+    {
       title: '',
       key: 'action',
+      render: (_, record) => {
+        const isAdmin = identity.userJSON.usertype === 1;
+        const isAssignee = record.assignedpersonnel === identity.userDetail.userid;
+        if (isAdmin || isAssignee) {
+          return (
+            <Space>
+              <Button type="link" onClick={() => openManageModal(record)}>Manage</Button>
+              <Button type="link" onClick={() => openAssignModal(record)}>Assign</Button>
+            </Space>
+          );
+        }
+        return null;
+      },
+    },
+  ];
+
+  const documentColumns = [
+    {
+      title: 'Requirement Name',
+      dataIndex: 'requirementname',
+      key: 'requirementname',
+    },
+    {
+      title: 'Filename',
+      dataIndex: 'filename',
+      key: 'filename',
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
       render: (_, record) => (
         <Space>
-          <Button type="link" onClick={() => openManageModal(record)}>Manage</Button>
-          <Button type="link" onClick={() => openAssignModal(record)}>Assign</Button>
+          <Button
+            type="link"
+            onClick={() => window.open(record.uploadfileurl, '_blank')}
+          >
+            Preview
+          </Button>
+          <a href={record.uploadfileurl} download={record.filename}>
+            <Button type="link">Download</Button>
+          </a>
         </Space>
       ),
-    });
-  }
+    },
+  ];
 
   return (
     <div style={{ padding: 24 }}>
       <Title level={3}>My Applications</Title>
+
+      <Search
+        placeholder="Search by name, application no, or mobile"
+        enterButton
+        allowClear
+        onSearch={handleSearch}
+        value={searchText}
+        onChange={(e) => handleSearch(e.target.value)}
+        style={{ maxWidth: 400, marginBottom: 16 }}
+      />
+
       <Table
         columns={columns}
-        dataSource={applications}
+        dataSource={filteredApps}
         rowKey="applicationno"
         loading={loading}
       />
 
       {/* Manage Modal */}
-      {selectedRecord && (
-        <Modal
-          open={modalVisible}
-          title="Manage Application"
-          onCancel={() => setModalVisible(false)}
-          footer={null}
-          centered
-        >
-          <Descriptions column={1} bordered size="small">
-            <Descriptions.Item label="Application No">{selectedRecord.applicationno}</Descriptions.Item>
-            <Descriptions.Item label="Name">{selectedRecord.firstname} {selectedRecord.lastname}</Descriptions.Item>
-            <Descriptions.Item label="Email">{selectedRecord.email}</Descriptions.Item>
-            <Descriptions.Item label="Mobile">{selectedRecord.mobile}</Descriptions.Item>
-            <Descriptions.Item label="Transaction Type">{transactionTypes[selectedRecord.applicationtype]}</Descriptions.Item>
-            <Descriptions.Item label="Status">
-              {(() => {
-                switch (selectedRecord.applicationstatus) {
-                  case 1: return <Tag color="blue">PENDING</Tag>;
-                  case 2: return <Tag color="green">APPROVED</Tag>;
-                  case 3: return <Tag color="orange">WITH PENDING REQUIREMENTS</Tag>;
-                  case 4: return <Tag color="red">REJECTED</Tag>;
-                  default: return 'Unknown';
-                }
-              })()}
-            </Descriptions.Item>
-          </Descriptions>
+      <Modal
+        open={modalVisible}
+        title="Manage Application"
+        onCancel={() => setModalVisible(false)}
+        footer={null}
+        centered
+      >
+        {selectedRecord && (
+          <>
+            <Descriptions column={1} bordered size="small">
+              <Descriptions.Item label="Application No">{selectedRecord.applicationno}</Descriptions.Item>
+              <Descriptions.Item label="Name">{selectedRecord.firstname} {selectedRecord.lastname}</Descriptions.Item>
+              <Descriptions.Item label="Email">{selectedRecord.email}</Descriptions.Item>
+              <Descriptions.Item label="Mobile">{selectedRecord.mobile}</Descriptions.Item>
+              <Descriptions.Item label="Transaction Type">{transactionTypes[selectedRecord.applicationtype]}</Descriptions.Item>
+              <Descriptions.Item label="Status">
+                {(() => {
+                  switch (selectedRecord.applicationstatus) {
+                    case 1: return <Tag color="blue">PENDING</Tag>;
+                    case 2: return <Tag color="green">APPROVED</Tag>;
+                    case 3: return <Tag color="orange">WITH PENDING REQUIREMENTS</Tag>;
+                    case 4: return <Tag color="red">REJECTED</Tag>;
+                    default: return 'Unknown';
+                  }
+                })()}
+              </Descriptions.Item>
+            </Descriptions>
 
-          <div style={{ marginTop: 24 }}>
-            <Space wrap style={{ width: '100%' }}>
-              <Button type="default" block onClick={() => handleViewDocuments(selectedRecord.applicationno)}>
-                View Documents
-              </Button>
-              <Popconfirm
-                title="Are you sure you want to approve this application?"
-                onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 2)}
-              >
-                <Button type="primary" block>Approve</Button>
-              </Popconfirm>
-              <Popconfirm
-                title="Are you sure you want to reject this application?"
-                onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 4)}
-              >
-                <Button danger block>Reject</Button>
-              </Popconfirm>
-              <Popconfirm
-                title="Mark application with pending requirements?"
-                onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 3)}
-              >
-                <Button block>Mark Pending</Button>
-              </Popconfirm>
-            </Space>
-          </div>
-        </Modal>
-      )}
+            <div style={{ marginTop: 24 }}>
+              <Space wrap style={{ width: '100%' }}>
+                <Button block onClick={() => handleViewDocuments(selectedRecord)}>View Documents</Button>
+                <Popconfirm
+                  title="Approve this application?"
+                  onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 2)}
+                >
+                  <Button type="primary" block>Approve</Button>
+                </Popconfirm>
+                <Popconfirm
+                  title="Reject this application?"
+                  onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 4)}
+                >
+                  <Button danger block>Reject</Button>
+                </Popconfirm>
+                <Popconfirm
+                  title="Mark application as pending requirements?"
+                  onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 3)}
+                >
+                  <Button block>Mark Pending</Button>
+                </Popconfirm>
+              </Space>
+            </div>
+          </>
+        )}
+      </Modal>
 
       {/* Assign Modal */}
       <Modal
@@ -260,7 +315,6 @@ function Application() {
         onCancel={() => setAssignModalVisible(false)}
         footer={null}
         centered
-        maskClosable={false}
       >
         <div style={{ marginBottom: 16 }}>
           <label>Select Personnel Type</label>
@@ -269,12 +323,12 @@ function Application() {
             placeholder="Choose personnel type"
             onChange={(value) => {
               setSelectedPersonnelType(value);
-              setNewAssignee(null); // Clear selected user
+              setNewAssignee(null);
               fetchUsersByType(value);
             }}
             value={selectedPersonnelType}
           >
-          {personnelOptions.map((option) => (
+            {personnelOptions.map((option) => (
               <Option key={option.value} value={option.value}>
                 {option.label}
               </Option>
@@ -321,16 +375,11 @@ function Application() {
         footer={null}
         centered
       >
-        <List
+        <Table
+          columns={documentColumns}
           dataSource={documents}
-          renderItem={(item) => (
-            <List.Item>
-              <a href={item.url} target="_blank" rel="noopener noreferrer">
-                {item.filename}
-              </a>
-            </List.Item>
-          )}
-          locale={{ emptyText: 'No documents uploaded.' }}
+          rowKey="id"
+          pagination={false}
         />
       </Modal>
     </div>

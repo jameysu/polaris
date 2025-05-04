@@ -7,7 +7,7 @@ import {
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 function Home() {
   const [stats, setStats] = useState({
@@ -17,8 +17,26 @@ function Home() {
     withPendingRequirements: 0,
   });
 
+  const [greeting, setGreeting] = useState('');
+  const identity = JSON.parse(localStorage.getItem('identity'));
+
   useEffect(() => {
-    // Simulate fetching dummy data
+    // Generate greeting based on time
+    const hour = new Date().getHours();
+    let timeGreeting = '';
+
+    if (hour < 12) {
+      timeGreeting = 'Good morning';
+    } else if (hour < 18) {
+      timeGreeting = 'Good afternoon';
+    } else {
+      timeGreeting = 'Good evening';
+    }
+
+    const name = identity?.userDetail?.firstname || 'User';
+    setGreeting(`${timeGreeting}, ${name}!`);
+
+    // Simulate fetching dummy stats
     const timeout = setTimeout(() => {
       setStats({
         pending: 12,
@@ -26,14 +44,15 @@ function Home() {
         rejected: 3,
         withPendingRequirements: 5,
       });
-    }, 500); // simulate loading delay
+    }, 500);
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [identity]);
 
   return (
     <div style={{ padding: 24 }}>
       <Title level={3}>Application Dashboard</Title>
+      <Text style={{ fontSize: 18, display: 'block', marginBottom: 24 }}>{greeting}</Text>
       <Row gutter={16}>
         <Col xs={24} sm={12} md={6}>
           <Card>
