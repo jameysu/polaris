@@ -1,9 +1,30 @@
-import React, {use, useState} from 'react'
+import React, { useEffect, useState } from 'react';
 import NavbarStyled from "./Navbar.styles.jsx";
-import {useNavigate} from "react-router-dom";
-import {Avatar, Badge, Button, Divider, Flex, Form, Image, Input, Modal, Popconfirm, Popover, Spin} from "antd";
+import { useNavigate } from "react-router-dom";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Divider,
+  Flex,
+  Form,
+  Image,
+  Input,
+  Modal,
+  Popover,
+  Spin,
+  Typography
+} from "antd";
 import denrLogo from "../../assets/images/denr.svg";
-import {BellOutlined, UserOutlined, LoadingOutlined} from "@ant-design/icons";
+import {
+  BellOutlined,
+  UserOutlined,
+  LoadingOutlined
+} from "@ant-design/icons";
+import http from "../../utils/http.js";
+import dayjs from "dayjs";
+
+const { Text } = Typography;
 
 function Navbar() {
   const navigate = useNavigate();
@@ -11,7 +32,22 @@ function Navbar() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [userModalVisible, setUserModalVisible] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
   const identity = JSON.parse(localStorage.getItem("identity"));
+  const userid = identity?.userJSON?.userid;
+
+  const roleMap = {
+    1: "ADMIN",
+    2: "CLIENT",
+    3: "RECEIVING/RELEASING CLERK",
+    4: "CENR OFFICER",
+    5: "CHIEF RPS",
+    6: "DEPUTY CENR OFFICER",
+    7: "INSPECTION TEAM RPS/TSD",
+    8: "TECHNICAL STAFF CONCERNED"
+  };
 
   const handleLogout = () => {
     setLoggingOut(true);
@@ -19,24 +55,84 @@ function Navbar() {
       localStorage.removeItem('auth');
       localStorage.removeItem('identity');
       navigate('/');
-    }, 3000)
-  }
+    }, 3000);
+  };
+
+  const fetchNotifications = async () => {
+    if (!userid) return;
+    try {
+      setLoadingNotifications(true);
+      const res = await http.get(`notification/${userid}`);
+      // if(identity.userJSON.usertype === 1) {
+      //   res = await http.get("notification");
+      // } else {
+      //   res = await http.get(`notification/${userid}`);
+      // }
+      setNotifications(res.notifications || []);
+    } catch (error) {
+      console.error("Failed to fetch notifications", error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [userid]);
+
+  const renderNotifications = () => {
+    if (loadingNotifications) {
+      return <Spin size="small" />;
+    }
+
+    if (notifications.length === 0) {
+      return <Text type="secondary">No notifications.</Text>;
+    }
+
+    return notifications.map((notif, index) => (
+      <div
+        key={notif.notificationno || index}
+        style={{
+          marginBottom: 8,
+          backgroundColor: notif.status ? '#f5f5f5' : '#e6f7ff',
+          padding: 8,
+          borderRadius: 4
+        }}
+      >
+        <Flex justify="space-between">
+          <Text strong>{notif.title}</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {dayjs(notif.createdAt).format('MMM D, YYYY hh:mm A')}
+          </Text>
+        </Flex>
+        <div>{notif.message}</div>
+        <Divider style={{ margin: '8px 0' }} />
+      </div>
+    ));
+  };
 
   const userPopoverContent = (
     <Flex
       vertical
       gap="small"
       style={{
-        minWidth: 150,   // set your desired width
-        minHeight: 100,  // set your desired height
+        minWidth: 150,
+        minHeight: 100,
         padding: 8
       }}
     >
       <Flex align={'center'} gap="small">
         <Avatar size="large" icon={<UserOutlined />} onClick={() => setUserModalVisible(true)} />
-        <span style={{ fontWeight: 500 }}>{identity.userDetail.firstname} {identity.userDetail.lastname}</span>
+        <div>
+          <div style={{ fontWeight: 500 }}>
+            {identity.userDetail.firstname} {identity.userDetail.lastname}
+          </div>
+          <div style={{ fontSize: 12, color: '#888' }}>
+            {roleMap[identity.userJSON.usertype]}
+          </div>
+        </div>
       </Flex>
-      <Divider style={{ margin: "10px" }}/>
+      <Divider style={{ margin: "10px" }} />
       <Button type="primary" danger size="small" onClick={handleLogout}>
         Logout
       </Button>
@@ -47,7 +143,7 @@ function Navbar() {
         footer={null}
         onCancel={() => {
           setUserModalVisible(false);
-          setIsEditMode(false); // Reset to view mode on close
+          setIsEditMode(false);
         }}
       >
         {isEditMode ? (
@@ -61,10 +157,8 @@ function Navbar() {
             }}
             onFinish={(values) => {
               console.log('Updated values:', values);
-              // TODO: Call API to update user details
               setIsEditMode(false);
               setUserModalVisible(false);
-              // Optional: update localStorage here
             }}
           >
             <Form.Item
@@ -107,13 +201,13 @@ function Navbar() {
             <p><strong>Name:</strong> {identity.userDetail.firstname} {identity.userDetail.lastname}</p>
             <p><strong>Email:</strong> {identity.userJSON.email}</p>
             <p><strong>Mobile:</strong> {identity.userDetail.mobile}</p>
+            <p><strong>Role:</strong> {roleMap[identity.userJSON.role]}</p>
             <Button type="primary" onClick={() => setIsEditMode(true)}>
               Edit Account
             </Button>
           </div>
         )}
       </Modal>
-
     </Flex>
   );
 
@@ -142,8 +236,17 @@ function Navbar() {
         <Flex justify="space-between" align="center">
           <Image src={denrLogo} preview={false} />
           <Flex justify="end" align="center" gap="middle">
-            <Popover trigger="click" title="Notifications">
-              <Badge dot>
+            <Popover
+              trigger="click"
+              title="Notifications"
+              placement="bottomRight"
+              content={
+                <div style={{ maxWidth: 300, maxHeight: 300, overflowY: 'auto' }}>
+                  {renderNotifications()}
+                </div>
+              }
+            >
+              <Badge dot={notifications.some(n => n.status === false)}>
                 <Avatar size="large" icon={<BellOutlined />} />
               </Badge>
             </Popover>
@@ -156,14 +259,6 @@ function Navbar() {
             </Popover>
           </Flex>
         </Flex>
-        <Modal
-          open={userModalVisible}
-          centered
-          footer={null}
-          onCancel={() => setUserModalVisible(false)}
-        >
-          hello
-        </Modal>
       </NavbarStyled>
     </>
   );

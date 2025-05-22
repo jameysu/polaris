@@ -13,6 +13,8 @@ import {
   Input,
 } from 'antd';
 import http from '../../../utils/http.js';
+import SetAppointmentModal from "./SetAppointmentModal.jsx";
+import ViewAppointmentModal from "./ViewAppointmentModal.jsx";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -34,6 +36,8 @@ const personnelOptions = [
 ];
 
 function Application() {
+  const [messageApi, contextHolder] = message.useMessage();
+
   const [applications, setApplications] = useState([]);
   const [filteredApps, setFilteredApps] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -46,16 +50,29 @@ function Application() {
   const [selectedPersonnelType, setSelectedPersonnelType] = useState(null);
   const [availableUsers, setAvailableUsers] = useState([]);
   const [searchText, setSearchText] = useState('');
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false);
+  const [appointmentMap, setAppointmentMap] = useState({});
+  console.log("appointmentMap", appointmentMap)
+  const [viewAppointmentModalVisible, setViewAppointmentModalVisible] = useState(false);
+  const [viewingAppointment, setViewingAppointment] = useState(null);
+
 
   const identity = JSON.parse(localStorage.getItem('identity'));
 
   const fetchApplications = async () => {
     try {
       setLoading(true);
-      const response = await http.get(`/application/request-search`);
+      let response;
+      if(identity.userJSON.usertype === 2) {
+        response = await http.get(`/applications/request/${identity.userJSON.userid}`);
+      } else {
+        response = await http.get(`/application/request-search`);
+      }
       const { applications, uploadedFiles } = response;
 
-      const appsWithDocs = applications.map((app) => ({
+      const appsWithDocs = applications
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) // sort by date descending
+      .map((app) => ({
         ...app,
         files: uploadedFiles.filter((file) => file.applicationno === app.applicationno),
       }));
@@ -63,14 +80,34 @@ function Application() {
       setApplications(appsWithDocs);
       setFilteredApps(appsWithDocs);
     } catch (error) {
-      message.error('Failed to fetch applications. Please try again.');
+      messageApi.open({
+        type: 'error',
+        content: 'Failed to fetch applications. Please try again.',
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchAppointments = async () => {
+    try {
+      const res = await http.get('/appointment/get');
+      const map = {};
+      res.appointments.forEach((item) => {
+        map[item.applicationno] = item;
+      });
+      setAppointmentMap(map);
+    } catch {
+      messageApi.open({
+        type: 'error',
+        content: 'Failed to fetch appointments',
+      });
+    }
+  };
+
   useEffect(() => {
     fetchApplications();
+    fetchAppointments();
   }, []);
 
   const handleSearch = (value) => {
@@ -88,11 +125,19 @@ function Application() {
   const updateApplicationStatus = async (applicationNo, status) => {
     try {
       await http.patch(`/application/${applicationNo}/status`, { applicationstatus: status });
-      message.success('Application status updated successfully');
+      messageApi.open({
+        type: 'success',
+        content: 'Application status updated successfully',
+      }).then(() => {
+        location.reload();
+      });
       await fetchApplications();
       setModalVisible(false);
     } catch {
-      message.error('Failed to update application status');
+      messageApi.open({
+        type: 'error',
+        content: 'Failed to update application status',
+      });
     }
   };
 
@@ -121,25 +166,50 @@ function Application() {
       });
       setAvailableUsers(response.data);
     } catch {
-      message.error('Failed to fetch users');
+      messageApi.open({
+        type: 'error',
+        content: 'Failed to fetch users',
+      });
     }
   };
 
   const handleAssigneeChange = async () => {
-    if (!newAssignee) return message.warning('Please select an assignee');
+    if (!newAssignee) return messageApi.open({
+      type: 'warning',
+      content: 'Please select an assignee',
+    });
+
 
     try {
       await http.patch(`/application/assign-personnel`, {
         applicationno: selectedRecord.applicationno,
         userid: newAssignee,
       });
-      message.success('Assignee updated successfully');
+      messageApi.open({
+        type: 'success',
+        content: 'Assignee updated successfully',
+      });
       await fetchApplications();
       setAssignModalVisible(false);
     } catch {
-      message.error('Failed to update assignee');
+      messageApi.open({
+        type: 'error',
+        content: 'Failed to update assignee',
+      });
     }
   };
+
+  const openCalendarModal = (record) => {
+    setSelectedRecord(record);
+    const appointment = appointmentMap[record.applicationno];
+    if (appointment) {
+      setViewingAppointment(appointment);
+      setViewAppointmentModalVisible(true);
+    } else {
+      setCalendarModalVisible(true);
+    }
+  };
+
 
   const columns = [
     {
@@ -188,15 +258,22 @@ function Application() {
       render: (_, record) => {
         const isAdmin = identity.userJSON.usertype === 1;
         const isAssignee = record.assignedpersonnel === identity.userDetail.userid;
-        if (isAdmin || isAssignee) {
-          return (
-            <Space>
-              <Button type="link" onClick={() => openManageModal(record)}>Manage</Button>
-              <Button type="link" onClick={() => openAssignModal(record)}>Assign</Button>
-            </Space>
-          );
-        }
-        return null;
+        const hasAppointment = appointmentMap[record.applicationno];
+        return (
+          <Space>
+            {(isAdmin || isAssignee) && (
+              <>
+                <Button type="link" onClick={() => openManageModal(record)}>Manage</Button>
+                <Button type="link" onClick={() => openAssignModal(record)}>Assign</Button>
+              </>
+            )}
+            {identity.userJSON.usertype === 2 && record.applicationstatus === 2 && (
+              <Button type="link" onClick={() => openCalendarModal(record)}>
+                {hasAppointment ? 'View Appointment Details' : 'Set Appointment'}
+              </Button>
+            )}
+          </Space>
+        );
       },
     },
   ];
@@ -217,12 +294,6 @@ function Application() {
       key: 'actions',
       render: (_, record) => (
         <Space>
-          <Button
-            type="link"
-            onClick={() => window.open(record.uploadfileurl, '_blank')}
-          >
-            Preview
-          </Button>
           <a href={record.uploadfileurl} download={record.filename}>
             <Button type="link">Download</Button>
           </a>
@@ -232,7 +303,9 @@ function Application() {
   ];
 
   return (
+
     <div style={{ padding: 24 }}>
+      {contextHolder}
       <Title level={3}>My Applications</Title>
 
       <Search
@@ -253,13 +326,7 @@ function Application() {
       />
 
       {/* Manage Modal */}
-      <Modal
-        open={modalVisible}
-        title="Manage Application"
-        onCancel={() => setModalVisible(false)}
-        footer={null}
-        centered
-      >
+      <Modal open={modalVisible} title="Manage Application" onCancel={() => setModalVisible(false)} footer={null} centered>
         {selectedRecord && (
           <>
             <Descriptions column={1} bordered size="small">
@@ -284,22 +351,13 @@ function Application() {
             <div style={{ marginTop: 24 }}>
               <Space wrap style={{ width: '100%' }}>
                 <Button block onClick={() => handleViewDocuments(selectedRecord)}>View Documents</Button>
-                <Popconfirm
-                  title="Approve this application?"
-                  onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 2)}
-                >
+                <Popconfirm title="Approve this application?" onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 2)}>
                   <Button type="primary" block>Approve</Button>
                 </Popconfirm>
-                <Popconfirm
-                  title="Reject this application?"
-                  onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 4)}
-                >
+                <Popconfirm title="Reject this application?" onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 4)}>
                   <Button danger block>Reject</Button>
                 </Popconfirm>
-                <Popconfirm
-                  title="Mark application as pending requirements?"
-                  onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 3)}
-                >
+                <Popconfirm title="Mark application as pending requirements?" onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 3)}>
                   <Button block>Mark Pending</Button>
                 </Popconfirm>
               </Space>
@@ -309,13 +367,7 @@ function Application() {
       </Modal>
 
       {/* Assign Modal */}
-      <Modal
-        open={assignModalVisible}
-        title="Assign Application"
-        onCancel={() => setAssignModalVisible(false)}
-        footer={null}
-        centered
-      >
+      <Modal open={assignModalVisible} title="Assign Application" onCancel={() => setAssignModalVisible(false)} footer={null} centered>
         <div style={{ marginBottom: 16 }}>
           <label>Select Personnel Type</label>
           <Select
@@ -329,9 +381,7 @@ function Application() {
             value={selectedPersonnelType}
           >
             {personnelOptions.map((option) => (
-              <Option key={option.value} value={option.value}>
-                {option.label}
-              </Option>
+              <Option key={option.value} value={option.value}>{option.label}</Option>
             ))}
           </Select>
         </div>
@@ -348,21 +398,14 @@ function Application() {
             >
               {availableUsers.map((user) => (
                 <Option key={user.userid} value={user.userid}>
-                  {user.UserDetail
-                    ? `${user.UserDetail.firstname} ${user.UserDetail.lastname}`
-                    : user.username}
+                  {user.UserDetail ? `${user.UserDetail.firstname} ${user.UserDetail.lastname}` : user.username}
                 </Option>
               ))}
             </Select>
           </div>
         )}
 
-        <Button
-          type="primary"
-          block
-          onClick={handleAssigneeChange}
-          disabled={!selectedPersonnelType || !newAssignee}
-        >
+        <Button type="primary" block onClick={handleAssigneeChange} disabled={!selectedPersonnelType || !newAssignee}>
           Assign to User
         </Button>
       </Modal>
@@ -372,16 +415,30 @@ function Application() {
         open={viewDocumentsModalVisible}
         title="Uploaded Documents"
         onCancel={() => setViewDocumentsModalVisible(false)}
-        footer={null}
-        centered
+        footer={null} centered
       >
-        <Table
-          columns={documentColumns}
-          dataSource={documents}
-          rowKey="id"
-          pagination={false}
-        />
+        <Table columns={documentColumns} dataSource={documents} rowKey="id" pagination={false} />
       </Modal>
+
+      {/* Appointment Modal */}
+      <SetAppointmentModal
+        open={calendarModalVisible}
+        onClose={() => setCalendarModalVisible(false)}
+        record={selectedRecord}
+        onSuccess={() => {
+          setTimeout(() => {
+            location.reload()
+          }, 2000)
+        }}
+      />
+
+      {/* View Appointment Modal */}
+      <ViewAppointmentModal
+        open={viewAppointmentModalVisible}
+        onClose={() => setViewAppointmentModalVisible(false)}
+        appointment={viewingAppointment}
+      />
+
     </div>
   );
 }

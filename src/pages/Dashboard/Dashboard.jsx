@@ -22,7 +22,7 @@ function Dashboard() {
           setCreateTransactionModalVisible={setCreateTransactionModalVisible}
           identity={identity}
         />
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, padding: '5px'}}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard/home" replace />} />
             <Route path="/home" element={<Home />} />

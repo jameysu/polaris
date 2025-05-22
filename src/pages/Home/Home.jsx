@@ -180,7 +180,7 @@ function Home() {
                 <Form.Item
                   name="middlename"
                 >
-                  <Input placeholder="Enter Middle name!" />
+                  <Input placeholder="Enter Middle name" />
                 </Form.Item>
 
                 <Flex gap="middle">

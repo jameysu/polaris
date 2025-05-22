@@ -20,7 +20,7 @@ const { Title, Text, Paragraph } = Typography;
 const transactionOptions = [
   {
     value: '1',
-    label: 'Get Permit for COV for the Transport of Planted Trees',
+    label: 'RO-F-03a-Get Permit for COV for the Transport of Planted Trees',
     requirements: [
       'Request letter indicating:\na. Type of forest product\nb. Species\nc. Estimated volume/quantity\nd. Type of conveyance and plate number\ne. Name and address of the consignee/destination\nf. Date of transport',
       'Certification that the forest products are harvested within the area of the owner (1 original)',
@@ -32,7 +32,7 @@ const transactionOptions = [
   },
   {
     value: '2',
-    label: 'Application of Chainsaw Registration',
+    label: 'R0-F-04-Application of Chainsaw Registration',
     requirements: [
       'Duly accomplished Application Form',
       'Official Receipt of Chainsaw Purchase or Affidavit of Ownership',
@@ -51,7 +51,7 @@ const transactionOptions = [
   },
   {
     value: '3',
-    label: 'Issuance of Special/Tree Cutting permit (Govt Projects)',
+    label: 'RO-F-05-Issuance of Special/Tree Cutting permit (Govt Projects)',
     requirements: [
       'Letter of Application (1 original)',
       'LGU Endorsement/Certification of No Objection (1 original)',
@@ -67,14 +67,16 @@ const transactionOptions = [
 const SetApplicationModal = ({ visible, setVisible }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  console.log("selectedTransaction", );
   const [form] = Form.useForm();
+  const agree = Form.useWatch('agree', form); // ✅ Watch checkbox value
   const [uploads, setUploads] = useState({});
   const [formCompleted, setFormCompleted] = useState(false);
   const [personalInfo, setPersonalInfo] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isNextDisabled = (currentStep === 1 && !selectedTransaction) ||
-    (currentStep === 2 && !formCompleted) ||
+    (currentStep === 2 && (!formCompleted || !agree)) || // ✅ Updated condition
     (currentStep === 3 && !selectedTransaction.requirements.every(req => uploads[req]?.length > 0));
 
   const isSubmitDisabled = currentStep === 3 && selectedTransaction &&
@@ -88,7 +90,7 @@ const SetApplicationModal = ({ visible, setVisible }) => {
     setFormCompleted(false);
     form.resetFields();
     setIsSubmitting(false);
-    if(currentStep === 4) {
+    if (currentStep === 4) {
       location.reload();
     }
   };
@@ -128,14 +130,15 @@ const SetApplicationModal = ({ visible, setVisible }) => {
       email,
       mobile,
       applicationtype: parseInt(selectedTransaction.value),
-      userid: identity.userDetail.userid,
+      userid: identity.userDetail.userid
     };
 
     try {
       const applicationResponse = await http.post('/application/request', applicationData);
 
       const formDataForUpload = new FormData();
-      selectedTransaction.requirements.forEach((req) => {
+      selectedTransaction.requirements.forEach((req, index) => {
+        console.log("index", index)
         if (uploads[req] && uploads[req].length > 0) {
           uploads[req].forEach(file => {
             formDataForUpload.append('files', file);
@@ -143,10 +146,12 @@ const SetApplicationModal = ({ visible, setVisible }) => {
         }
       });
 
+      console.log("applicationResponse", applicationResponse)
+      console.log("formDataForUpload", formDataForUpload);
       await http.post(`/application/upload-file/${applicationResponse.data.applicationno}`, formDataForUpload, {
         headers: {
           'Content-Type': 'multipart/form-data',
-        },
+        }
       });
 
       setCurrentStep(4);
