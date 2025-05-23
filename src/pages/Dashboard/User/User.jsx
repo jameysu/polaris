@@ -6,33 +6,38 @@ import {
   Alert,
   Button,
   Popconfirm,
-  message,
   Space,
-  Input,
+  Input, message as antdMessage,
 } from 'antd';
 import http from '../../../utils/http'; // Adjust the path if necessary
 import AddUserModal from './AddUserModal';
 import EditUserModal from './EditUserModal';
-import dayjs from 'dayjs'; // Import dayjs for date formatting
+import dayjs from 'dayjs';
 
 const { Title } = Typography;
 const { Search } = Input;
 
 function User() {
+
+  const [message, contextHolder] = antdMessage.useMessage();
+
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleting, setDeleting] = useState(false); // Optional: loading state during deletion
   const [addUserVisible, setAddUserVisible] = useState(false);
   const [editUserVisible, setEditUserVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
   const fetchUsers = async () => {
+    setLoading(true);
     try {
       const response = await http.get('/auth/users');
       setUsers(response.data);
       setFilteredUsers(response.data);
+      setError(null);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch users');
     } finally {
@@ -41,24 +46,28 @@ function User() {
   };
 
   const handleDelete = async (userid) => {
+    setDeleting(true);
     try {
-      await http.delete(`/auth/users/${userid}`);
-      message.success('User deleted successfully');
-      fetchUsers(); // refresh list
+      await http.delete('/auth/user/remove', {
+        data: { userid },
+      });
+      message.success('User removed successfully');
+      setTimeout(() => fetchUsers(), 2000);
     } catch (err) {
-      message.error('Failed to delete user');
+      const errMsg = err.response?.data?.message || 'Failed to delete user';
+      message.error(errMsg);
+    } finally {
+      setDeleting(false);
     }
   };
 
   const handleSearch = (value) => {
     setSearchText(value);
     const lower = value.toLowerCase();
-    const filtered = users.filter((user) => {
-      return (
-        user.username.toLowerCase().includes(lower) ||
-        user.email.toLowerCase().includes(lower)
-      );
-    });
+    const filtered = users.filter((user) =>
+      user.username.toLowerCase().includes(lower) ||
+      user.email.toLowerCase().includes(lower)
+    );
     setFilteredUsers(filtered);
   };
 
@@ -121,8 +130,9 @@ function User() {
             onConfirm={() => handleDelete(record.userid)}
             okText="Yes"
             cancelText="No"
+            disabled={deleting}
           >
-            <Button danger type="primary">
+            <Button danger type="primary" loading={deleting}>
               Delete
             </Button>
           </Popconfirm>
@@ -136,6 +146,7 @@ function User() {
 
   return (
     <div>
+      {contextHolder}
       <Title level={2}>User List</Title>
       <Space style={{ marginBottom: 16 }}>
         <Search
