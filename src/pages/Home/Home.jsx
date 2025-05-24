@@ -53,7 +53,7 @@ function Home() {
       }
     } catch (error) {
       console.log(error);
-      messageApi.error('Login failed: ' + (error.response?.data.message || error.message));
+      messageApi.error('Login failed, email and password do not match!');
     } finally {
       setLoginLoading(false);
     }
@@ -112,6 +112,7 @@ function Home() {
             type="primary"
             className="continue-btn"
             onClick={() => setSigninModalVisible(true)}
+            loading={loginLoading}
           >
             Continue
           </Button>

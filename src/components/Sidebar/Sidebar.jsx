@@ -13,21 +13,25 @@ const Sidebar = ({ setCreateTransactionModalVisible, identity }) => {
   const location = useLocation();
 
   const items = [
-    {
-      key: 'create-application',
-      style: { padding: 0, marginTop: 0 },
-      label: (
-        <Button
-          type="primary"
-          block
-          icon={<PlusOutlined />}
-          style={{ textAlign: 'left' }}
-          onClick={() => setCreateTransactionModalVisible(true)}
-        >
-          Set Application
-        </Button>
-      ),
-    },
+    ...(identity.userJSON.usertype === 1 || identity.userJSON.usertype === 2
+      ? [
+        {
+          key: 'create-application',
+          style: { padding: 0, marginTop: 0 },
+          label: (
+            <Button
+              type="primary"
+              block
+              icon={<PlusOutlined />}
+              style={{ textAlign: 'left' }}
+              onClick={() => setCreateTransactionModalVisible(true)}
+            >
+              Set Application
+            </Button>
+          ),
+        },
+      ]
+      : []),
     {
       key: 'home',
       label: <Link to="/dashboard/home">Home</Link>,

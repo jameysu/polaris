@@ -348,7 +348,7 @@ function Application() {
               </Descriptions.Item>
             </Descriptions>
 
-            <div style={{ marginTop: 24 }}>
+            <div style={{ marginTop: 24, display: 'flex' }}>
               <Space wrap style={{ width: '100%' }}>
                 <Button block onClick={() => handleViewDocuments(selectedRecord)}>View Documents</Button>
                 <Popconfirm title="Approve this application?" onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 2)}>
@@ -357,9 +357,9 @@ function Application() {
                 <Popconfirm title="Reject this application?" onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 4)}>
                   <Button danger block>Reject</Button>
                 </Popconfirm>
-                <Popconfirm title="Mark application as pending requirements?" onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 3)}>
-                  <Button block>Mark Pending</Button>
-                </Popconfirm>
+                {/*<Popconfirm title="Mark application as pending requirements?" onConfirm={() => updateApplicationStatus(selectedRecord.applicationno, 3)}>*/}
+                {/*  <Button block>Mark Pending</Button>*/}
+                {/*</Popconfirm>*/}
               </Space>
             </div>
           </>

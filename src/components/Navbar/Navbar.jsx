@@ -5,6 +5,7 @@ import {
   Avatar,
   Badge,
   Button,
+  DatePicker,
   Divider,
   Flex,
   Form,
@@ -13,7 +14,8 @@ import {
   Modal,
   Popover,
   Spin,
-  Typography
+  Typography,
+  message
 } from "antd";
 import denrLogo from "../../assets/images/denr.svg";
 import {
@@ -63,11 +65,6 @@ function Navbar() {
     try {
       setLoadingNotifications(true);
       const res = await http.get(`notification/${userid}`);
-      // if(identity.userJSON.usertype === 1) {
-      //   res = await http.get("notification");
-      // } else {
-      //   res = await http.get(`notification/${userid}`);
-      // }
       setNotifications(res.notifications || []);
     } catch (error) {
       console.error("Failed to fetch notifications", error);
@@ -81,13 +78,8 @@ function Navbar() {
   }, [userid]);
 
   const renderNotifications = () => {
-    if (loadingNotifications) {
-      return <Spin size="small" />;
-    }
-
-    if (notifications.length === 0) {
-      return <Text type="secondary">No notifications.</Text>;
-    }
+    if (loadingNotifications) return <Spin size="small" />;
+    if (notifications.length === 0) return <Text type="secondary">No notifications.</Text>;
 
     return notifications.map((notif, index) => (
       <div
@@ -109,6 +101,48 @@ function Navbar() {
         <Divider style={{ margin: '8px 0' }} />
       </div>
     ));
+  };
+
+  const handleFormSubmit = async (values) => {
+    try {
+      const payload = {
+        userid: identity.userJSON.userid,
+        email: values.email,
+        username: identity.userJSON.username,
+        usertype: identity.userJSON.usertype,
+        firstname: values.firstname,
+        lastname: values.lastname,
+        middlename: values.middlename,
+        birthday: values.birthday ? dayjs(values.birthday).format("YYYY-MM-DD") : null,
+        mobile: values.mobile
+      };
+
+      const res = await http.put("/auth/user/update", payload);
+      message.success("Account updated successfully!");
+      setIsEditMode(false);
+      setUserModalVisible(false);
+
+      // Optionally update localStorage if email or userDetail changed
+      const updatedIdentity = {
+        ...identity,
+        userJSON: {
+          ...identity.userJSON,
+          email: values.email
+        },
+        userDetail: {
+          ...identity.userDetail,
+          firstname: values.firstname,
+          lastname: values.lastname,
+          middlename: values.middlename,
+          birthday: values.birthday ? dayjs(values.birthday).format("YYYY-MM-DD") : null,
+          mobile: values.mobile
+        }
+      };
+      localStorage.setItem("identity", JSON.stringify(updatedIdentity));
+    } catch (err) {
+      console.error("Failed to update user", err);
+      message.error("Failed to update account.");
+    }
   };
 
   const userPopoverContent = (
@@ -152,42 +186,30 @@ function Navbar() {
             initialValues={{
               firstname: identity.userDetail.firstname,
               lastname: identity.userDetail.lastname,
+              middlename: identity.userDetail.middlename,
               email: identity.userJSON.email,
               mobile: identity.userDetail.mobile,
+              birthday: identity.userDetail.birthday ? dayjs(identity.userDetail.birthday) : null,
             }}
-            onFinish={(values) => {
-              console.log('Updated values:', values);
-              setIsEditMode(false);
-              setUserModalVisible(false);
-            }}
+            onFinish={handleFormSubmit}
           >
-            <Form.Item
-              label="First Name"
-              name="firstname"
-              rules={[{ required: true, message: 'Please enter your first name' }]}
-            >
+            <Form.Item label="First Name" name="firstname" rules={[{ required: true }]}>
               <Input />
             </Form.Item>
-            <Form.Item
-              label="Last Name"
-              name="lastname"
-              rules={[{ required: true, message: 'Please enter your last name' }]}
-            >
+            <Form.Item label="Last Name" name="lastname" rules={[{ required: true }]}>
               <Input />
             </Form.Item>
-            <Form.Item
-              label="Email"
-              name="email"
-              rules={[{ required: true, type: 'email', message: 'Please enter a valid email' }]}
-            >
+            <Form.Item label="Middle Name" name="middlename">
               <Input />
             </Form.Item>
-            <Form.Item
-              label="Mobile"
-              name="mobile"
-              rules={[{ required: true, message: 'Please enter your mobile number' }]}
-            >
+            <Form.Item label="Email" name="email" rules={[{ type: 'email', required: true }]}>
               <Input />
+            </Form.Item>
+            <Form.Item label="Mobile" name="mobile" rules={[{ required: true }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item label="Birthday" name="birthday">
+              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
             </Form.Item>
             <Form.Item>
               <Flex justify="space-between">
@@ -201,10 +223,8 @@ function Navbar() {
             <p><strong>Name:</strong> {identity.userDetail.firstname} {identity.userDetail.lastname}</p>
             <p><strong>Email:</strong> {identity.userJSON.email}</p>
             <p><strong>Mobile:</strong> {identity.userDetail.mobile}</p>
-            <p><strong>Role:</strong> {roleMap[identity.userJSON.role]}</p>
-            <Button type="primary" onClick={() => setIsEditMode(true)}>
-              Edit Account
-            </Button>
+            <p><strong>Role:</strong> {roleMap[identity.userJSON.usertype]}</p>
+            <Button type="primary" onClick={() => setIsEditMode(true)}>Edit Account</Button>
           </div>
         )}
       </Modal>
