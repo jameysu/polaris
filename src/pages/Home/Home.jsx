@@ -5,7 +5,7 @@ import denrLogo from '../../assets/images/denr.svg';
 import { Link, useNavigate } from 'react-router-dom';
 import http from "../../utils/http.js";
 import OtpModal from "./OtpModal.jsx";
-import {LoadingOutlined} from "@ant-design/icons";
+import {LoadingOutlined, SearchOutlined} from "@ant-design/icons";
 
 const { Text } = Typography;
 const { TabPane } = Tabs;
@@ -24,7 +24,11 @@ function Home() {
   const [otpModalVisible, setOtpModalVisible] = useState(false);
   const [signupResponse, setSignupResponse] = useState({});
   const [loggingIn, setLoggingIn] = useState(false);
-  console.log('loggingIn', loggingIn)
+
+  const [searchApplicationStatus, setSearchApplicationStatus] = useState(false);
+  const [applicationStatusModalVisible, setApplicationStatusModalVisible] = useState(false);
+  const [application, setApplication] = useState(null);
+  const [applicationNumber, setApplicationNumber] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('auth');
@@ -77,6 +81,37 @@ function Home() {
     }
   };
 
+  const onSearchApplication = async (value) => {
+    setSearchApplicationStatus(true);
+    try {
+      const response = await http.get(`/application/request/${value}`);
+      if(response.success) {
+        messageApi.success({content: 'Application found!', key: 'search-application-success', duration: 3});
+        let applicationStatus;
+        switch(response.applicationstatus) {
+          case 1:
+            applicationStatus = 'PENDING';
+            break;
+          case 2:
+            applicationStatus = 'APPROVED';
+            break;
+          case 4:
+            applicationStatus = 'REJECTED';
+            break;
+          default:
+            break;
+        }
+        setApplication(applicationStatus);
+        setApplicationStatusModalVisible(true);
+      }
+    } catch (error) {
+      console.log(error);
+      messageApi.error({content: 'Application not found!', key: 'search-application-success', duration: 3});
+    } finally {
+      setSearchApplicationStatus(false);
+    }
+  }
+
   return (
     <>
       {loggingIn && (
@@ -98,6 +133,52 @@ function Home() {
         </div>
       )}
       <HomeStyled>
+        <div style={{
+          position: "absolute",
+          display: 'flex',
+          height: 'fit-content',
+          width: 'fit-content',
+          top: '60px',
+          right: '100px',
+          bottom: 0
+        }}>
+          {/*<Button*/}
+          {/*  // type="primary"*/}
+          {/*  style={{background: 'transparent', border: 'none'}}*/}
+          {/*  className="continue-btn"*/}
+          {/*  onClick={() => setSigninModalVisible(true)}*/}
+          {/*  loading={loginLoading}*/}
+          {/*>*/}
+          {/*  <Text style={{color: 'white', fontSize:'25px', fontWeight: '500'}}>Sign In or Sign Up</Text>*/}
+          {/*</Button>*/}
+          <Button
+            style={{
+              height: '60px',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)', // subtle translucent background
+              border: 'none', // soft border
+              borderRadius: '8px',
+              padding: '8px 20px',
+              backdropFilter: 'blur(0px)', // modern glass effect
+              WebkitBackdropFilter: 'blur(0px)',
+              transition: 'all 0.3s ease',
+            }}
+            className="continue-btn"
+            onClick={() => setSigninModalVisible(true)}
+            loading={loginLoading}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.25)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'}
+          >
+            <Text style={{
+              color: 'white',
+              fontSize: '18px',
+              fontWeight: '500',
+              textShadow: '0 1px 3px rgba(0, 0, 0, 0.4)'
+            }}>
+              Sign In or Sign Up
+            </Text>
+          </Button>
+
+        </div>
         <Image src={denrLogo} preview={false} />
         <Flex vertical justify="center" align="center" gap="middle">
           <Text className="ph-text">Republic of the Philippines</Text>
@@ -108,19 +189,25 @@ function Home() {
           <Text className="other-text">
             DEPARTMENT OF ENVIRONMENT AND NATURAL RESOURCES
           </Text>
-          <Button
-            type="primary"
-            className="continue-btn"
-            onClick={() => setSigninModalVisible(true)}
-            loading={loginLoading}
-          >
-            Continue
-          </Button>
+          <div style={{width:'100%', height: '50px', display:'flex', gap:'20px'}}>
+            <Input placeholder="Enter Application Number" onChange={(e) => setApplicationNumber(e.target.value)} value={applicationNumber} />
+            <Button
+              type={'primary'}
+              style={{width:'200px', height: '50px'}}
+              onClick={(e) => {
+                if(applicationNumber.length <= 1){
+                  messageApi.error('Please enter an application number!');
+                  e.preventDefault()
+                } else {
+                  onSearchApplication(applicationNumber)
+                }
+              }}
+            ><SearchOutlined />Track</Button>
+          </div>
         </Flex>
 
         {/* Signin Modal */}
         <Modal
-          title="Signin / Signup"
           open={signinModalVisible}
           onCancel={onCloseModal}
           footer={null} // Remove default footer
@@ -252,6 +339,48 @@ function Home() {
           loginResponse={loginResponse}
           setLoggingIn={setLoggingIn}
         />
+        <Modal
+          open={applicationStatusModalVisible}
+          onCancel={() => setApplicationStatusModalVisible(false)}
+          footer={[
+            <Button key="ok" type="primary" onClick={() => setApplicationStatusModalVisible(false)}>
+              OK
+            </Button>
+          ]}
+          centered
+          maskClosable={false}
+          closable={true}
+          title="Application Status"
+        >
+          <Flex vertical align="center" gap="small">
+            <Text>Your application number:</Text>
+            <Text strong>{applicationNumber}</Text>
+            <Divider />
+            <Text>Status:</Text>
+            {application === 'APPROVED' && (
+              <Text type="success" strong style={{ fontSize: 18 }}>
+                ✅ Approved
+              </Text>
+            )}
+            {application === 'REJECTED' && (
+              <Text type="danger" strong style={{ fontSize: 18 }}>
+                ❌ Rejected
+              </Text>
+            )}
+            {application === 'PENDING' && (
+              <Text strong style={{ fontSize: 18 }}>
+                ⏳ Pending
+              </Text>
+            )}
+            <Divider />
+            <Text type="secondary">
+              {application === 'APPROVED' && 'You may proceed with the next steps as instructed.'}
+              {application === 'REJECTED' && 'Please contact support for more information.'}
+              {application === 'PENDING' && 'Please wait while your application is being reviewed.'}
+            </Text>
+          </Flex>
+        </Modal>
+
       </HomeStyled>
     </>
   );

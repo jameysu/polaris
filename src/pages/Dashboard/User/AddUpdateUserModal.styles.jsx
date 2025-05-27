@@ -6,7 +6,6 @@ const AddUpdateUserModalStyled = styled(Modal)`
   .ant-form-item {
     margin-bottom: 10px;
   }
-  
 `;
 
 

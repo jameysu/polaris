@@ -20,7 +20,7 @@ function AddUserModal({ visible, setVisible, onSuccess }) {
     setLoading(true);
     try {
       console.log(values);
-      const res = await http.post('/auth/signup', values);
+      const res = await http.post('/auth/admin/add-user-v2', values);
       if (res.success) {
         message.success('User added successfully!');
         form.resetFields();
@@ -135,7 +135,7 @@ function AddUserModal({ visible, setVisible, onSuccess }) {
           </Form.Item>
 
           <Form.Item
-            name="role"
+            name="usertype"
             label="User Type"
             rules={[{ required: true, message: 'Please select a user type' }]}
             style={{ marginBottom: 10 }}

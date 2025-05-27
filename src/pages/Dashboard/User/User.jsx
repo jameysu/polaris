@@ -31,6 +31,18 @@ function User() {
   const [editUserVisible, setEditUserVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
+  const userTypeMap = {
+    1: 'ADMIN',
+    2: 'CLIENT',
+    3: 'RECEIVING/RELEASING CLERK',
+    4: 'CENR OFFICER',
+    5: 'CHIEF RPS',
+    6: 'DEPUTY CENR OFFICER',
+    7: 'INSPECTION TEAM RPS/TSD',
+    8: 'TECHNICAL STAFF CONCERNED',
+  };
+
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -95,6 +107,7 @@ function User() {
       title: 'User Type',
       dataIndex: 'usertype',
       key: 'usertype',
+      render: (usertype) => userTypeMap[usertype] || 'Unknown',
     },
     {
       title: 'Full Name',
