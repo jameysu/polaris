@@ -77,14 +77,14 @@ function Home() {
           );
         } else {
           console.log("TEST");
-          response = await http.get(`/application/request-search`);
+          response = await http.get("/application/request-search");
         }
 
         if (response.success) {
           const apps = response.applications || [];
 
           // ✅ NEW: Set full list for "Application Requests"
-          setAllApplications(apps); // Make sure you have `const [allApplications, setAllApplications] = useState([]);`
+          setAllApplications(apps); // Make sure you have const [allApplications, setAllApplications] = useState([]);
 
           // ✅ Existing: Save latest 5 for recent applications
           setRecentApplications(apps.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5));
@@ -129,7 +129,7 @@ function Home() {
         if(identity.userJSON.usertype === 2) {
           response = await http.get(`/appointment/user/${identity.userJSON.userid}`);
         } else {
-          response = await http.get(`/appointment/get`);
+          response = await http.get("/appointment/get");
         }
         if (response.success) {
           const now = dayjs();
@@ -199,16 +199,6 @@ function Home() {
             />
           </Card>
         </Col>
-        {/*<Col xs={24} sm={12} md={4}>*/}
-        {/*  <Card>*/}
-        {/*    <Statistic*/}
-        {/*      title="Pending Requirements"*/}
-        {/*      value={stats.withPendingRequirements}*/}
-        {/*      valueStyle={{ color: "#faad14" }}*/}
-        {/*      prefix={<ExclamationCircleTwoTone twoToneColor="#faad14" />}*/}
-        {/*    />*/}
-        {/*  </Card>*/}
-        {/*</Col>*/}
         <Col xs={24} sm={12} md={4}>
           <Card>
             <Statistic
@@ -235,38 +225,40 @@ function Home() {
       <Row gutter={16}>
         <Col xs={24} md={12}>
           <Card title="Application Requests" bordered={false}>
-            {allApplications.length === 0 ? (
-              <Text>No application requests found.</Text>
-            ) : (
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}
-              >
-                {allApplications.map((app) => (
-                  <Space
-                    key={app.applicationno}
-                    align="start"
-                    style={{ display: "flex" }}
-                  >
-                    {getStatusIcon(app.applicationstatus)}
-                    <div>
-                      <Text strong>{app.applicationno}</Text> —{" "}
-                      {`${app.firstname} ${app.middlename ?? ""} ${
-                        app.lastname
-                      }`}
-                      <br />
-                      <Text type="secondary">
-                        Submitted:{" "}
-                        {new Date(app.createdAt).toLocaleDateString()} @{" "}
-                        {new Date(app.createdAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </Text>
-                    </div>
-                  </Space>
-                ))}
-              </div>
-            )}
+            <div style={{ maxHeight: 400, overflowY: 'auto' }}> {/* Added styles here */}
+              {allApplications.length === 0 ? (
+                <Text>No application requests found.</Text>
+              ) : (
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
+                >
+                  {allApplications.map((app) => (
+                    <Space
+                      key={app.applicationno}
+                      align="start"
+                      style={{ display: "flex" }}
+                    >
+                      {getStatusIcon(app.applicationstatus)}
+                      <div>
+                        <Text strong>{app.applicationno}</Text> —{" "}
+                        {`${app.firstname} ${app.middlename ?? ""} ${
+                          app.lastname
+                        }`}
+                        <br />
+                        <Text type="secondary">
+                          Submitted:{" "}
+                          {new Date(app.createdAt).toLocaleDateString()} @{" "}
+                          {new Date(app.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </Text>
+                      </div>
+                    </Space>
+                  ))}
+                </div>
+              )}
+            </div>
           </Card>
         </Col>
 
@@ -276,51 +268,55 @@ function Home() {
             bordered={false}
             style={{ marginBottom: 24 }}
           >
-            <List
-              itemLayout="horizontal"
-              dataSource={upcomingAppointments}
-              locale={{ emptyText: "No upcoming appointments" }}
-              renderItem={(item) => (
-                <List.Item>
-                  <List.Item.Meta
-                    avatar={<Avatar icon={<CalendarOutlined />} />}
-                    title={<Text strong>{item.applicationno}</Text>}
-                    description={`${item.firstname} ${item.lastname} - ${dayjs(
-                      item.appointmentdate
-                    ).format("MM/DD/YYYY")} @ ${dayjs(
-                      item.appointmenttime,
-                      "HH:mm:ss"
-                    ).format("hh:mm A")}`}
-                  />
-                </List.Item>
-              )}
-            />
+            <div style={{ maxHeight: 200, overflowY: 'auto' }}> {/* Added styles here */}
+              <List
+                itemLayout="horizontal"
+                dataSource={upcomingAppointments}
+                locale={{ emptyText: "No upcoming appointments" }}
+                renderItem={(item) => (
+                  <List.Item>
+                    <List.Item.Meta
+                      avatar={<Avatar icon={<CalendarOutlined />} />}
+                      title={<Text strong>{item.applicationno}</Text>}
+                      description={`${item.firstname} ${item.lastname} - ${dayjs(
+                        item.appointmentdate
+                      ).format("MM/DD/YYYY")} @ ${dayjs(
+                        item.appointmenttime,
+                        "HH:mm:ss"
+                      ).format("hh:mm A")}`}
+                    />
+                  </List.Item>
+                )}
+              />
+            </div>
           </Card>
 
           <Card title="Done Appointments" bordered={false}>
-            <List
-              itemLayout="horizontal"
-              dataSource={doneAppointments}
-              locale={{ emptyText: "No finished appointments" }}
-              renderItem={(item) => (
-                <List.Item>
-                  <List.Item.Meta
-                    avatar={
-                      <Avatar
-                        icon={<CheckCircleTwoTone twoToneColor="#52c41a" />}
-                      />
-                    }
-                    title={<Text strong>{item.applicationno}</Text>}
-                    description={`${item.firstname} ${item.lastname} - ${dayjs(
-                      item.appointmentdate
-                    ).format("MM/DD/YYYY")} @ ${dayjs(
-                      item.appointmenttime,
-                      "HH:mm:ss"
-                    ).format("hh:mm A")}`}
-                  />
-                </List.Item>
-              )}
-            />
+            <div style={{ maxHeight: 200, overflowY: 'auto' }}> {/* Added styles here */}
+              <List
+                itemLayout="horizontal"
+                dataSource={doneAppointments}
+                locale={{ emptyText: "No finished appointments" }}
+                renderItem={(item) => (
+                  <List.Item>
+                    <List.Item.Meta
+                      avatar={
+                        <Avatar
+                          icon={<CheckCircleTwoTone twoToneColor="#52c41a" />}
+                        />
+                      }
+                      title={<Text strong>{item.applicationno}</Text>}
+                      description={`${item.firstname} ${item.lastname} - ${dayjs(
+                        item.appointmentdate
+                      ).format("MM/DD/YYYY")} @ ${dayjs(
+                        item.appointmenttime,
+                        "HH:mm:ss"
+                      ).format("hh:mm A")}`}
+                    />
+                  </List.Item>
+                )}
+              />
+            </div>
           </Card>
         </Col>
       </Row>
